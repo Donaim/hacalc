@@ -1,3 +1,3 @@
-# Changelog for PatternT-compiler
+# Changelog for hacalc
 
 ## Unreleased changes

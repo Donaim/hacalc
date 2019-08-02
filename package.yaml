@@ -1,6 +1,6 @@
-name:                PatternT-compiler
+name:                hacalc
 version:             0.1.0.0
-github:              " Donaim/PatternT-compiler"
+github:              " Donaim/hacalc"
 license:             BSD3
 author:              " Donaim"
 maintainer:          " 3Donaim@gmail.com"
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/ Donaim/PatternT-compiler#readme>
+description:         Please see the README on GitHub at <https://github.com/ Donaim/hacalc#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -39,7 +39,7 @@ ghc-options:
 - -O3
 
 executables:
-  PatternT-compiler-exe:
+  hacalc-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -47,5 +47,5 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - PatternT-compiler
+    - hacalc
     - cmdargs
