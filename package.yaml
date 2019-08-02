@@ -32,6 +32,7 @@ ghc-options:
 - -Wno-tabs
 - -Wincomplete-patterns
 - -Wno-unused-imports
+- -Wno-unused-matches
 - -Wno-unused-local-binds
 - -Wno-type-defaults
 - -O3
