@@ -21,6 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/ Don
 
 dependencies:
 - base >= 4.7 && < 5
+- patternt
 
 library:
   source-dirs: src
