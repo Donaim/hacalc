@@ -33,8 +33,8 @@ mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patt
 type Stdout = SimplifyMonad [(Tree, Either SimplifyPattern String, SimplifyCtx)]
 type Rulesets = [[SimplifyPattern]]
 
-interpretOneTree :: Tree -> [[SimlifyFT]] -> Stdout
-interpretOneTree = loop
+interpretOneTree :: [[SimlifyFT]] -> Tree -> Stdout
+interpretOneTree rules t = loop t rules
 	where
 	loop tree [] = return []
 	loop tree (ruleset : rest) = do
@@ -45,10 +45,10 @@ interpretOneTree = loop
 		next <- loop newtree rest
 		return (history ++ next)
 
-interpretOneTree0 :: Tree -> Rulesets -> Stdout
-interpretOneTree0 t rules = interpretOneTree t (mixedRules rules)
+interpretOneTree0 :: Rulesets -> Tree -> Stdout
+interpretOneTree0 rules = interpretOneTree (mixedRules rules)
 
-interpretLine :: String -> Rulesets -> Either ParseError Stdout
-interpretLine line rules = case tokenize line of
+interpretLine :: Rulesets -> String -> Either ParseError Stdout
+interpretLine rules line = case tokenize line of
 	Left e -> Left e
-	Right tokens -> Right $ interpretOneTree0 (makeTree (Group tokens)) rules
+	Right tokens -> Right $ interpretOneTree0 rules (makeTree (Group tokens))
