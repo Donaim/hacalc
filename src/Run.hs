@@ -56,11 +56,11 @@ interpretLine rules line = case tokenize line of
 	Left e -> Left e
 	Right tokens -> Right $ interpretOneTree0 rules (makeTree (Group tokens))
 
-interpretTextWithRules :: Rulesets -> String -> ([ParseError], [Stdout])
+interpretTextWithRules :: Rulesets -> String -> [(String, Either ParseError Stdout)]
 interpretTextWithRules rules text =
-	text |> lines |> map (interpretLine rules) |> partitionEithers
+	text |> lines |> map (\ line -> (line, interpretLine rules line))
 
-interpretRulesAndText :: String -> String -> Either [ParseMatchError] ([ParseError], [Stdout])
+interpretRulesAndText :: String -> String -> Either [ParseMatchError] [(String, Either ParseError Stdout)]
 interpretRulesAndText rulesText exprText = do
 	rules <- readPatterns rulesText
 	return (interpretTextWithRules rules exprText)

@@ -48,3 +48,4 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - PatternT-compiler
+    - cmdargs
