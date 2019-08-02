@@ -1,9 +1,12 @@
 
 module Run where
 
+import Data.Either
+
 import PatternT.Types
 import PatternT.SimplifyInterface
 import PatternT.Parsing
+import Parser
 import Types
 import Builtins
 import Util
@@ -52,3 +55,12 @@ interpretLine :: Rulesets -> String -> Either ParseError Stdout
 interpretLine rules line = case tokenize line of
 	Left e -> Left e
 	Right tokens -> Right $ interpretOneTree0 rules (makeTree (Group tokens))
+
+interpretTextWithRules :: Rulesets -> String -> ([ParseError], [Stdout])
+interpretTextWithRules rules text =
+	text |> lines |> map (interpretLine rules) |> partitionEithers
+
+interpretRulesAndText :: String -> String -> Either [ParseMatchError] ([ParseError], [Stdout])
+interpretRulesAndText rulesText exprText = do
+	rules <- readPatterns rulesText
+	return (interpretTextWithRules rules exprText)

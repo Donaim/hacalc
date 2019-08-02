@@ -13,3 +13,7 @@ padLeft c n s = s ++ (replicate toappend c)
 
 isWhiteSpace :: String -> Bool
 isWhiteSpace str = all isSpace str
+
+(|>) :: a -> (a -> b) -> b
+(|>) x f = f x
+infixl 0 |>
