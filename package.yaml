@@ -25,6 +25,16 @@ dependencies:
 library:
   source-dirs: src
 
+ghc-options:
+- -Wall
+- -Wno-name-shadowing
+- -Wno-tabs
+- -Wincomplete-patterns
+- -Wno-unused-imports
+- -Wno-unused-local-binds
+- -Wno-type-defaults
+- -O3
+
 executables:
   PatternT-compiler-exe:
     main:                Main.hs
