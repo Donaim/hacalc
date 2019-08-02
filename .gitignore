@@ -1,0 +1,4 @@
+.stack-work/
+PatternT-compiler.cabal
+*~
+.*.swp
