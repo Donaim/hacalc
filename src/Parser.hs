@@ -7,7 +7,6 @@ import Data.List
 
 import PatternT.All
 import Types
-import Run
 import Util
 
 partitionString :: String -> String -> (String, String, String)
@@ -66,6 +65,3 @@ readOneRuleset lines = do
 	partitioned = partitionEithers mrules
 	okRules     = snd partitioned
 	badRules    = fst partitioned
-
-mixedRules :: [[SimplifyPattern]] -> [[SimlifyFT]]
-mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patterns

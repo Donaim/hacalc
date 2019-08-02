@@ -23,3 +23,6 @@ pureRules =
 	, ruleLess "lt?"
 	, ruleLessOrEq "le?"
 	]
+
+mixedRules :: [[SimplifyPattern]] -> [[SimlifyFT]]
+mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patterns
