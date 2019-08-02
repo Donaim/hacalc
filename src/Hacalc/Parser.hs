@@ -1,13 +1,13 @@
 
-module Parser where
+module Hacalc.Parser where
 
 import Data.Either
 import Control.Monad
 import Data.List
 
 import PatternT.All
-import Types
-import Util
+import Hacalc.Types
+import Hacalc.Util
 
 partitionString :: String -> String -> (String, String, String)
 partitionString break s =

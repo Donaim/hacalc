@@ -1,5 +1,5 @@
 
-module Util where
+module Hacalc.Util where
 
 import Data.Char
 

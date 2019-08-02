@@ -1,15 +1,15 @@
 
-module Run where
+module Hacalc.Run where
 
 import Data.Either
 
 import PatternT.Types
 import PatternT.SimplifyInterface
 import PatternT.Parsing
-import Parser
-import Types
-import Builtins
-import Util
+import Hacalc.Parser
+import Hacalc.Types
+import Hacalc.Builtins
+import Hacalc.Util
 
 simplifyCtxInitial :: SimplifyCtx
 simplifyCtxInitial = ()

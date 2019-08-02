@@ -9,9 +9,9 @@ import Data.Data
 import System.IO
 
 import PatternT.All
-import Types
-import Run
-import Util
+import Hacalc.Types
+import Hacalc.Run
+import Hacalc.Util
 
 data ArgsT
 	= Load

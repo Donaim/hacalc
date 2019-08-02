@@ -1,5 +1,5 @@
 
-module Builtins where
+module Hacalc.Builtins where
 
 import PatternT.Types
 import PatternT.Util

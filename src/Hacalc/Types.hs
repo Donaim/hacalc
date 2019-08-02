@@ -1,5 +1,5 @@
 
-module Types where
+module Hacalc.Types where
 
 import PatternT.Types
 
