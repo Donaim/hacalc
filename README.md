@@ -10,9 +10,9 @@ Here is what **hacalc** adds to **PatternT**:
 - staged rule application. Example:
 
 ```
-a -> *
+* -> +
 ------
-* -> a
++ -> *
 ```
 
 Above will not create an infinite loop because rules separated by `-----` are applied in separate groups, in order
