@@ -3,6 +3,7 @@ module Run where
 
 import PatternT.Types
 import PatternT.SimplifyInterface
+import PatternT.Parsing
 import Types
 import Builtins
 import Util
@@ -26,10 +27,13 @@ pureRules =
 	, ruleLessOrEq "le?"
 	]
 
-mixedRules :: [[SimplifyPattern]] -> [[SimlifyFT]]
+mixedRules :: Rulesets -> [[SimlifyFT]]
 mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patterns
 
-interpretOneTree :: Tree -> [[SimlifyFT]] -> SimplifyMonad [(Tree, Either SimplifyPattern String, SimplifyCtx)]
+type Stdout = SimplifyMonad [(Tree, Either SimplifyPattern String, SimplifyCtx)]
+type Rulesets = [[SimplifyPattern]]
+
+interpretOneTree :: Tree -> [[SimlifyFT]] -> Stdout
 interpretOneTree = loop
 	where
 	loop tree [] = return []
@@ -40,3 +44,11 @@ interpretOneTree = loop
 			else fst3 (last history)
 		next <- loop newtree rest
 		return (history ++ next)
+
+interpretOneTree0 :: Tree -> Rulesets -> Stdout
+interpretOneTree0 t rules = interpretOneTree t (mixedRules rules)
+
+interpretLine :: String -> Rulesets -> Either ParseError Stdout
+interpretLine line rules = case tokenize line of
+	Left e -> Left e
+	Right tokens -> Right $ interpretOneTree0 (makeTree (Group tokens)) rules
