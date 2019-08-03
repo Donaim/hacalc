@@ -38,11 +38,13 @@ splitRulesets lines = loop [] [] lines
 		else loop buf (x : cur) xs
 
 readPatterns :: String -> Either [ParseMatchError] [[SimplifyPattern]]
-readPatterns text = do
+readPatterns = readPatternsL . splitLines
+
+readPatternsL :: [String] -> Either [ParseMatchError] [[SimplifyPattern]]
+readPatternsL allLines = do
 	unless (null badReads) (Left badReads)
 	return (snd partitioned)
 	where
-	allLines = splitLines text
 	rulesets = splitRulesets allLines
 
 	reads :: [Either [ParseMatchError] [SimplifyPattern]]
