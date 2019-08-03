@@ -6,6 +6,7 @@ import Data.Either
 import PatternT.Types
 import PatternT.SimplifyInterface
 import PatternT.Parsing
+import PatternT.Display
 import Hacalc.Parser
 import Hacalc.Types
 import Hacalc.Builtins
@@ -32,9 +33,6 @@ pureRules =
 
 mixedRules :: Rulesets -> [[SimlifyFT]]
 mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patterns
-
-type Stdout = SimplifyMonad [(Tree, Either SimplifyPattern String, SimplifyCtx)]
-type Rulesets = [[SimplifyPattern]]
 
 interpretOneTree :: [[SimlifyFT]] -> Tree -> Stdout
 interpretOneTree rules t = loop t rules
@@ -64,3 +62,8 @@ interpretRulesAndText :: String -> String -> Either [ParseMatchError] [(String, 
 interpretRulesAndText rulesText exprText = do
 	rules <- readPatterns rulesText
 	return (interpretTextWithRules rules exprText)
+
+showHistory :: [(Tree, Either SimplifyPattern String, SimplifyCtx)] -> [(String, String, String)]
+showHistory = map f
+	where
+	f (t, traceElem, ctx) = (stringifyTree t, stringifyTraceElem traceElem, showCtx ctx)
