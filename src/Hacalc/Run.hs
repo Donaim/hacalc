@@ -50,9 +50,10 @@ interpretOneTree0 :: Rulesets -> Tree -> Stdout
 interpretOneTree0 rules = interpretOneTree (mixedRules rules)
 
 interpretLine :: Rulesets -> String -> Either ParseError Stdout
-interpretLine rules line = case tokenize line of
+interpretLine rules line = case tokenize uncommented of
 	Left e -> Left e
 	Right tokens -> Right $ interpretOneTree0 rules (makeTree (Group tokens))
+	where uncommented = fst3 $ partitionString "//" line
 
 interpretTextWithRules :: Rulesets -> String -> [(String, Either ParseError Stdout)]
 interpretTextWithRules rules text =
