@@ -49,19 +49,34 @@ ruleLess :: String -> PureSimplificationF
 ruleLess name = (name, func)
 	where
 	func simplifyF t = case t of
-		(Branch [name, a, b]) -> Just $ Leaf $ show (a < b)
+		(Branch [name, a, b]) -> Just $ Leaf $ show (compareHacalc a b == LT)
 		(_) -> Nothing
 
 ruleLessOrEq :: String -> PureSimplificationF
 ruleLessOrEq name = (name, func)
 	where
 	func simplifyF t = case t of
-		(Branch [name, a, b]) -> Just $ Leaf $ show (a <= b)
+		(Branch [name, a, b]) -> Just $ Leaf $ show (let x = compareHacalc a b in x == LT || x == EQ)
 		(_) -> Nothing
 
 ---------------
 -- ORDERING --
 ---------------
+
+-- Comparison that is aware of numbers
+compareHacalc :: Tree -> Tree -> Ordering
+compareHacalc a b =
+	case a of
+		(Leaf as) -> case b of
+			(Leaf bs) ->
+				compareLeafs as bs
+			(Branch {}) ->
+				LT -- ASSUMPTION: no singleton branches
+		(Branch xs) -> case b of
+			(Leaf {}) ->
+				GT -- ASSUMPTION: no singleton branches
+			(Branch ys) ->
+				compareHacalcList (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
 
 compareLeafs :: Symbol -> Symbol -> Ordering
 compareLeafs a b =
@@ -73,19 +88,15 @@ compareLeafs a b =
 			Nothing -> LT
 			Just bn -> compare an bn
 
-instance Ord Tree where
-	compare a b =
-		case a of
-			(Leaf as) -> case b of
-				(Leaf bs) ->
-					compareLeafs as bs
-				(Branch {}) ->
-					LT -- ASSUMPTION: no singleton branches
-			(Branch xs) -> case b of
-				(Leaf {}) ->
-					GT -- ASSUMPTION: no singleton branches
-				(Branch ys) ->
-					compare (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
+compareHacalcList :: [Tree] -> [Tree] -> Ordering
+compareHacalcList [] [] = EQ
+compareHacalcList xs [] = GT
+compareHacalcList [] ys = LT
+compareHacalcList (x : xs) (y : ys) =
+	let cmp = compareHacalc x y
+	in if cmp == EQ
+		then compareHacalcList xs ys
+		else cmp
 
 -----------
 -- UTILS --
