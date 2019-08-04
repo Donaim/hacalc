@@ -10,3 +10,5 @@ type SimlifyFT = SimplificationF SimplifyMonad SimplifyCtx
 
 type Stdout = SimplifyMonad [(Tree, Either SimplifyPattern String, SimplifyCtx)]
 type Rulesets = [[SimplifyPattern]]
+
+type Number = Rational

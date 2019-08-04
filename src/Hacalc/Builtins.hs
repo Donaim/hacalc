@@ -4,6 +4,8 @@ module Hacalc.Builtins where
 import PatternT.Types
 import PatternT.Util
 import PatternT.SimplifyInterface
+import Hacalc.Types
+import Hacalc.Util
 
 ruleAdd :: String -> PureSimplificationF
 ruleAdd name = (name, const $ stdNumberRule (+) name)

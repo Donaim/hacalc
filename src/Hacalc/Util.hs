@@ -2,6 +2,9 @@
 module Hacalc.Util where
 
 import Data.Char
+import Text.Read (readMaybe)
+import PatternT.Types
+import Hacalc.Types
 
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
@@ -17,3 +20,25 @@ isWhiteSpace str = all isSpace str
 (|>) :: a -> (a -> b) -> b
 (|>) x f = f x
 infixl 0 |>
+
+-- | Strip all trailing zeroes
+showNoZeroes :: (Show a) => a -> String
+showNoZeroes x = if anydotq then striped else s
+	where
+		s = show x
+		r = reverse s
+		anydotq = any (== '.') s
+		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
+
+numToTree :: Number -> Tree
+numToTree x = Leaf (showNoZeroes (fromRational x :: Double))
+
+symbolToMaybeNum :: Symbol -> Maybe Number
+symbolToMaybeNum s = case readMaybe s :: Maybe Double of
+	Just x -> Just (toRational x)
+	Nothing -> Nothing
+
+treeToMaybeNum :: Tree -> Maybe Number
+treeToMaybeNum t = case t of
+	(Leaf s) -> symbolToMaybeNum s
+	(Branch {}) -> Nothing
