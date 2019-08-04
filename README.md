@@ -19,9 +19,35 @@ Above will not create an infinite loop because rules separated by `-----` are ap
 
 # Examples
 
-TBD
+Using 'Calculator simple' rules from here: https://github.com/Donaim/PatternT-tests/blob/master/examples/test1  
+```
+3 * x + (1 * x + 5 * x)
+>>> 9 * x
 
-All of tests for the compiler located in separate repo [TBD](TBD)
+3 * x + (1 * x + 1 + 5 * x)
+>>> 1 + (9 * x)
+
+3 * x + 3 + 5 * x + 10 + (1 * x + 1 + 5 * x)
+>>> 14 + (14 * x)
+```
+
+Using 'Lambda calculus' rules from here: https://github.com/Donaim/PatternT-tests/blob/master/examples/test1  
+```
++ (succ (succ 0)) (succ 0)
+>>> (succ (succ (succ 0)))
+
+show (+ (succ (succ 0)) (succ 0))
+>>> 3
+
+show (fac (succ (succ (succ (succ 0
+>>> 24
+
+> inf (succ (succ 0))
+>>> true
+
+> (succ (succ 0)) inf
+>>> false
+```
 
 # HOWTO
 
