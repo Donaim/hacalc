@@ -31,6 +31,9 @@ pureRules =
 	, ruleLessOrEq "le?"
 	]
 
+delimitingSymbols :: [String]
+delimitingSymbols = ["+", "-", "*", "/", "^"]
+
 mixedRules :: Rulesets -> [[SimlifyFT]]
 mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patterns
 
@@ -50,7 +53,7 @@ interpretOneTree0 :: Rulesets -> Tree -> Stdout
 interpretOneTree0 rules = interpretOneTree (mixedRules rules)
 
 interpretLine :: Rulesets -> String -> Either ParseError Stdout
-interpretLine rules line = case tokenize uncommented of
+interpretLine rules line = case tokenize (delimitSymbols False delimitingSymbols uncommented) of
 	Left e -> Left e
 	Right tokens -> Right $ interpretOneTree0 rules (makeTree (Group tokens))
 	where uncommented = fst3 $ partitionString "//" line
