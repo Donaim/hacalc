@@ -18,6 +18,7 @@ data ArgsT
 	{ rulefile :: String
 	, exprfile :: String
 	, original :: Bool
+	, limit    :: Maybe Int
 	}
 	deriving (Show, Data, Typeable)
 
@@ -26,13 +27,14 @@ load = Load
 	{ rulefile = def &= argPos 0 &= typ "rulefile"
 	, exprfile = def &= argPos 1 &= typ "exprfile"
 	, original = def &= help "Display the original expression in output. Looks like 'expr -> reduced'"
+	, limit    = def &= help "Limit the number of evaluations"
 	}
 
 putErrLn :: String -> IO ()
 putErrLn = hPutStrLn stderr
 
-withText :: Bool -> String -> String -> IO ()
-withText originalQ ruleText exprText =
+withText :: Maybe Int -> Bool -> String -> String -> IO ()
+withText mlimit originalQ ruleText exprText =
 	case interpretRulesAndText ruleText exprText of
 		Left e -> putStrLn $ "Rules have syntax errors: " ++ show e
 		Right results -> mapM_ mapf results
@@ -41,7 +43,10 @@ withText originalQ ruleText exprText =
 	mapf (line, result) = case result of
 		Left errors -> putErrLn $ line ++ " -> ERROR: " ++ show errors
 		Right ok -> do
-			r <- ok
+			allr <- ok
+			let r = case mlimit of
+				Nothing -> allr
+				Just n -> take n allr
 			let showed = case r of [] -> line ; xs -> stringifyTree (fst3 (last xs))
 			let answer = if originalQ then line ++ " -> " ++ showed else showed
 			putStrLn $ answer
@@ -55,5 +60,5 @@ main = do
 
 	ruleText <- readFile (rulefile args)
 	exprText <- readFile (exprfile args)
-	withText (original args) ruleText exprText
+	withText (limit args) (original args) ruleText exprText
 
