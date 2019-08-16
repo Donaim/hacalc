@@ -1,6 +1,7 @@
 
 module Hacalc.Util where
 
+import Data.Coerce (coerce)
 import Data.Char
 import Text.Read (readMaybe)
 import PatternT.Types
@@ -42,3 +43,13 @@ treeToMaybeNum :: Tree -> Maybe Number
 treeToMaybeNum t = case t of
 	(Leaf s) -> symbolToMaybeNum s
 	(Branch {}) -> Nothing
+
+newtype IdentityMonad a = IdentityMonad { unliftIdentityMonad :: a }
+
+instance Functor IdentityMonad where
+	fmap     = coerce
+instance Applicative IdentityMonad where
+	pure     = IdentityMonad
+	(<*>)    = coerce
+instance Monad IdentityMonad where
+	m >>= k  = k (unliftIdentityMonad m)
