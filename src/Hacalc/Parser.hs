@@ -4,6 +4,7 @@ module Hacalc.Parser where
 import Data.Either
 import Control.Monad
 import Data.List
+import Data.Char
 
 import PatternT.All
 import Hacalc.Types
@@ -26,7 +27,7 @@ partitionString break s =
 		else afterBreak break (pos + 1) (tail str)
 
 splitLines :: String -> [String]
-splitLines = lines
+splitLines = map (dropWhile isSpace). lines
 
 splitRulesets :: [String] -> [[String]]
 splitRulesets lines = loop [] [] lines
