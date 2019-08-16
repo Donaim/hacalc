@@ -35,7 +35,7 @@ putErrLn = hPutStrLn stderr
 
 withText :: Maybe Int -> Bool -> String -> String -> IO ()
 withText mlimit originalQ ruleText exprText =
-	case interpretRulesAndText ruleText exprText of
+	case interpretRulesAndText () ruleText exprText of
 		Left e -> putStrLn $ "Rules have syntax errors: " ++ show e
 		Right results -> mapM_ mapf results
 
