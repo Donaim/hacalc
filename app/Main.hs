@@ -43,7 +43,7 @@ withText mlimit originalQ ruleText exprText =
 	mapf (line, result) = case result of
 		Left errors -> putErrLn $ line ++ " -> ERROR: " ++ show errors
 		Right ok -> do
-			allr <- ok
+			let allr = unliftSimplifyMonad ok
 			let r = case mlimit of
 				Nothing -> allr
 				Just n -> take n allr
