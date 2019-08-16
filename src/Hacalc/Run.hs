@@ -35,14 +35,14 @@ delimitingSymbols :: [String]
 delimitingSymbols = ["+", "-", "*", "/", "^"]
 
 mixedRules :: Rulesets -> [[SimlifyFT]]
-mixedRules patterns = map (\ ps -> map Tuple32 pureRules ++ map Tuple30 ps) patterns
+mixedRules patterns = map (\ ps -> map Right3 pureRules ++ map Left3 ps) patterns
 
 interpretOneTree :: [[SimlifyFT]] -> Tree -> Stdout
 interpretOneTree rules t = loop t rules
 	where
 	loop tree [] = return []
 	loop tree (ruleset : rest) = do
-		history <- mixedApplySimplificationsWithPureUntil0Debug ruleset simplifyCtxInitial tree
+		history <- mixedApplySimplificationsUntil0Debug ruleset simplifyCtxInitial tree
 		let newtree = if null history
 			then tree
 			else fst3 (last history)
@@ -53,7 +53,7 @@ interpretOneTree0 :: Rulesets -> Tree -> Stdout
 interpretOneTree0 rules = interpretOneTree (mixedRules rules)
 
 interpretLine :: Rulesets -> String -> Either ParseError Stdout
-interpretLine rules line = case tokenize (delimitSymbols False delimitingSymbols uncommented) of
+interpretLine rules line = case tokenize (delimitSymbols DelimiterPreserveQuotes delimitingSymbols uncommented) of
 	Left e -> Left e
 	Right tokens -> Right $ interpretOneTree0 rules (makeTree (Group tokens))
 	where uncommented = fst3 $ partitionString "//" line
