@@ -4,6 +4,7 @@ module Hacalc.Util where
 import Data.Coerce (coerce)
 import Data.Char
 import Text.Read (readMaybe)
+import Data.Ratio (denominator, numerator)
 import PatternT.Types
 import Hacalc.Types
 
@@ -32,12 +33,23 @@ showNoZeroes x = if anydotq then striped else s
 		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
 
 numToTree :: Number -> Tree
-numToTree x = Leaf (showNoZeroes (fromRational x :: Double))
+numToTree x = case x of
+	NumberNaN -> Leaf "NaN"
+	NumberFloat x -> Leaf (showNoZeroes x)
+	NumberFrac x ->
+		if denominator x == 1
+		then Leaf (show $ numerator x)
+		else Leaf (show x)
 
 symbolToMaybeNum :: Symbol -> Maybe Number
-symbolToMaybeNum s = case readMaybe s :: Maybe Double of
-	Just x -> Just (toRational x)
-	Nothing -> Nothing
+symbolToMaybeNum s =
+	if s == "NaN" || s == "Infinity"
+	then Just NumberNaN
+	else case readMaybe s :: Maybe Rational of
+		Just x -> Just (NumberFrac x)
+		Nothing -> case readMaybe s :: Maybe Double of
+			Just x -> Just (NumberFloat x)
+			Nothing -> Nothing
 
 treeToMaybeNum :: Tree -> Maybe Number
 treeToMaybeNum t = case t of

@@ -6,4 +6,8 @@ import PatternT.Types
 type Stdout ctx = [(Tree, Either SimplifyPattern String, ctx)]
 type Rulesets = [[SimplifyPattern]]
 
-type Number = Rational
+data Number
+	= NumberFrac Rational
+	| NumberFloat Double
+	| NumberNaN
+	deriving (Eq, Show, Read)

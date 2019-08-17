@@ -15,12 +15,17 @@ import Hacalc.Util
 pureRules :: [PureSimplificationF]
 pureRules =
 	[ ruleAdd "$add"
-	, ruleMult "$mult"
+	, ruleMul "$mult"
 	, ruleSub "$sub"
 	, ruleDiv "$div"
 	, rulePow "$pow"
+	, ruleMod "$mod"
 	, ruleEqual "$equal"
 	, ruleIsNum "$num?"
+	, ruleIsInt "int?"
+	, ruleIsFrac "fraction?"
+	, ruleIsFloat "float?"
+	, ruleFloat "float"
 	, ruleLess "lt?"
 	, ruleLessOrEq "le?"
 	]
