@@ -5,6 +5,7 @@ import Data.Coerce (coerce)
 import Data.Char
 import Text.Read (readMaybe)
 import Data.Ratio (denominator, numerator)
+import Numeric (showFFloat)
 import PatternT.Types
 import Hacalc.Types
 
@@ -24,13 +25,16 @@ isWhiteSpace str = all isSpace str
 infixl 0 |>
 
 -- | Strip all trailing zeroes
-showNoZeroes :: (Show a) => a -> String
+showNoZeroes :: (RealFloat a) => a -> String
 showNoZeroes x = if anydotq then striped else s
 	where
-		s = show x
+		s = showFullPrecision x
 		r = reverse s
 		anydotq = any (== '.') s
 		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
+
+showFullPrecision :: (RealFloat a) => a -> String
+showFullPrecision x = showFFloat Nothing x ""
 
 numToTree :: Number -> Tree
 numToTree x = case x of
