@@ -41,7 +41,7 @@ interpretOneTree ctx rules t = loop t rules
 	where
 	loop tree [] = return []
 	loop tree (ruleset : rest) = do
-		history <- mixedApplySimplificationsUntil0Debug ruleset ctx tree
+		history <- mixedApplySimplificationsUntil0Debug (Just 2) ruleset ctx tree -- NOTE: limit is only 2, deep conditionals will be dropped
 		let newtree = if null history
 			then tree
 			else fst3 (last history)
