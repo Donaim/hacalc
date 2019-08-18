@@ -134,10 +134,10 @@ compareNumbers :: Number -> Number -> Ordering
 compareNumbers a b = case a of
 	NumberFrac a -> case b of
 		NumberFrac b -> compare a b
-		NumberFloat b -> compare a (toRational b)
+		NumberFloat b -> compare a (toRationalPrecise b)
 		NumberNaN {} -> LT
 	NumberFloat a -> case b of
-		NumberFrac b -> compare (toRational a) b
+		NumberFrac b -> compare (toRationalPrecise a) b
 		NumberFloat b -> compare a b
 		NumberNaN {} -> EQ
 	NumberNaN {} -> case b of
@@ -202,11 +202,11 @@ numberDefaultOp op a b =
 		NumberFrac a -> case b of
 			NumberNaN {} -> NumberNaN
 			NumberFrac b -> op a b
-			NumberFloat b -> op a (toRational b)
+			NumberFloat b -> op a (toRationalPrecise b)
 		NumberFloat a -> case b of
 			NumberNaN {} -> NumberNaN
-			NumberFrac b -> op (toRational a) b
-			NumberFloat b -> op (toRational a) (toRational b)
+			NumberFrac b -> op (toRationalPrecise a) b
+			NumberFloat b -> op (toRationalPrecise a) (toRationalPrecise b)
 
 stdNumberRule :: (Number -> Number -> Number) -> String -> Tree -> Maybe Tree
 stdNumberRule op name t = case t of

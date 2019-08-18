@@ -5,7 +5,7 @@ import Data.Coerce (coerce)
 import Data.Char
 import Text.Read (readMaybe)
 import Data.Ratio (denominator, numerator)
-import Numeric (showFFloat)
+import Numeric (showFFloat, readFloat)
 import PatternT.Types
 import Hacalc.Types
 
@@ -23,6 +23,12 @@ isWhiteSpace str = all isSpace str
 (|>) :: a -> (a -> b) -> b
 (|>) x f = f x
 infixl 0 |>
+
+toRationalPrecise :: Double -> Rational
+toRationalPrecise x = positive |> readFloat |> head |> fst |> (*) sign
+	where
+	sign = if x < 0 then -1 else 1
+	positive = if x < 0 then tail (show x) else (show x) -- for some reason, readFloat does not work with negatives
 
 -- | Strip all trailing zeroes
 showNoZeroes :: (RealFloat a) => a -> String
