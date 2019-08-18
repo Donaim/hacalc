@@ -4,9 +4,7 @@ module Hacalc.Builtins where
 import Data.Fixed (mod')
 import Data.Ratio (denominator)
 
-import PatternT.Types
-import PatternT.Util
-import PatternT.SimplifyInterface
+import PatternT.All
 import Hacalc.Types
 import Hacalc.Util
 
@@ -31,10 +29,10 @@ ruleMod name = (name, const $ stdNumberRule numberMod name)
 ruleEqual :: String -> PureSimplificationF
 ruleEqual = stdAnyRule func
 	where
-	func simplifyF args = case args of
+	func simplifies args = case args of
 		(x : xs) ->
-			let simplifiedxs = map (applySimplificationsUntil0LastF simplifyF) xs
-			in let simplifiedx = applySimplificationsUntil0LastF simplifyF x
+			let simplifiedxs = map (applySimplificationsUntil0LastF (applyFirstSimplificationF simplifies)) xs
+			in let simplifiedx = applySimplificationsUntil0LastF (applyFirstSimplificationF simplifies) x
 				in if all (== simplifiedx) simplifiedxs
 					then Just $ Leaf "True"
 					else Just $ Leaf "False"
@@ -216,11 +214,11 @@ stdNumberRule op name t = case t of
 		differentOrNothing failcase $ withOp numToTree treeToMaybeNum op failcase rargs
 	where failcase = Leaf name
 
-stdAnyRule :: ((Tree -> Maybe Tree) -> [Tree] -> Maybe Tree) -> String -> PureSimplificationF
+stdAnyRule :: ([Tree -> Maybe Tree] -> [Tree] -> Maybe Tree) -> String -> PureSimplificationF
 stdAnyRule func name = (name, wrap)
 	where
-	wrap simplifyF t = case t of
-		(Branch (name : args)) -> func simplifyF args
+	wrap simplifies t = case t of
+		(Branch (name : args)) -> func simplifies args
 		(_) -> Nothing
 
 differentOrNothing :: Tree -> Tree -> Maybe Tree
