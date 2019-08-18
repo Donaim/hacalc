@@ -29,10 +29,10 @@ ruleMod :: String -> PureSimplificationF
 ruleMod name = (name, const $ stdNumberRule numberMod name)
 
 ruleEqual :: String -> PureSimplificationF
-ruleEqual name = (name, func)
+ruleEqual = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch (fname : x : xs)) -> -- ASSUMPTION: fname  == name
+	func simplifyF args = case args of
+		(x : xs) ->
 			let simplifiedxs = map (applySimplificationsUntil0LastF simplifyF) xs
 			in let simplifiedx = applySimplificationsUntil0LastF simplifyF x
 				in if all (== simplifiedx) simplifiedxs
@@ -41,84 +41,74 @@ ruleEqual name = (name, func)
 		(_) -> Nothing
 
 ruleIsNum :: String -> PureSimplificationF
-ruleIsNum name = (name, func)
+ruleIsNum = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch (name : args)) -> case args of
-			[x] -> case treeToMaybeNum x of
-				Just n -> Just $ Leaf "True"
-				Nothing -> Just $ Leaf "False"
-			(_) -> Nothing
+	func simplifyF args = case args of
+		[x] -> case treeToMaybeNum x of
+			Just n -> Just $ Leaf "True"
+			Nothing -> Just $ Leaf "False"
 		(_) -> Nothing
 
 ruleIsInt :: String -> PureSimplificationF
-ruleIsInt name = (name, func)
+ruleIsInt = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch (name : args)) -> case args of
-			[x] -> case treeToMaybeNum x of
-				Just n -> Just $ case n of
-					NumberNaN {} -> Leaf "False"
-					NumberFloat x -> Leaf (if x == fromInteger (round x) then "True" else "False")
-					NumberFrac x -> Leaf (if denominator x == 1 then "True" else "False")
-				Nothing -> Nothing
-			(_) -> Nothing
+	func simplifyF args = case args of
+		[x] -> case treeToMaybeNum x of
+			Just n -> Just $ case n of
+				NumberNaN {} -> Leaf "False"
+				NumberFloat x -> Leaf (if x == fromInteger (round x) then "True" else "False")
+				NumberFrac x -> Leaf (if denominator x == 1 then "True" else "False")
+			Nothing -> Nothing
 		(_) -> Nothing
 
 ruleIsFrac :: String -> PureSimplificationF
-ruleIsFrac name = (name, func)
+ruleIsFrac = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch (name : args)) -> case args of
-			[x] -> case treeToMaybeNum x of
-				Just n -> Just $ case n of
-					NumberNaN {} -> Leaf "False"
-					NumberFloat x -> Leaf "False"
-					NumberFrac x -> Leaf (if denominator x == 1 then "False" else "True")
-				Nothing -> Nothing
-			(_) -> Nothing
+	func simplifyF args = case args of
+		[x] -> case treeToMaybeNum x of
+			Just n -> Just $ case n of
+				NumberNaN {} -> Leaf "False"
+				NumberFloat x -> Leaf "False"
+				NumberFrac x -> Leaf (if denominator x == 1 then "False" else "True")
+			Nothing -> Nothing
 		(_) -> Nothing
 
 ruleIsFloat :: String -> PureSimplificationF
-ruleIsFloat name = (name, func)
+ruleIsFloat = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch (name : args)) -> case args of
-			[x] -> case treeToMaybeNum x of
-				Just n -> Just $ case n of
-					NumberNaN {} -> Leaf "False"
-					NumberFloat x -> Leaf (if x == fromInteger (round x) then "False" else "True")
-					NumberFrac x -> Leaf "False"
-				Nothing -> Nothing
-			(_) -> Nothing
+	func simplifyF args = case args of
+		[x] -> case treeToMaybeNum x of
+			Just n -> Just $ case n of
+				NumberNaN {} -> Leaf "False"
+				NumberFloat x -> Leaf (if x == fromInteger (round x) then "False" else "True")
+				NumberFrac x -> Leaf "False"
+			Nothing -> Nothing
 		(_) -> Nothing
 
 ruleFloat :: String -> PureSimplificationF
-ruleFloat name = (name, func)
+ruleFloat = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch (name : args)) -> case args of
-			[x] -> case treeToMaybeNum x of
-				Just n -> Just $ case n of
-					NumberNaN {} -> x
-					NumberFloat n -> x
-					NumberFrac n -> numToTree (NumberFloat $ fromRational n)
-				Nothing -> Nothing
-			(_) -> Nothing
+	func simplifyF args = case args of
+		[x] -> case treeToMaybeNum x of
+			Just n -> Just $ case n of
+				NumberNaN {} -> x
+				NumberFloat n -> x
+				NumberFrac n -> numToTree (NumberFloat $ fromRational n)
+			Nothing -> Nothing
 		(_) -> Nothing
 
 ruleLess :: String -> PureSimplificationF
-ruleLess name = (name, func)
+ruleLess = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch [name, a, b]) -> Just $ Leaf $ show (compareHacalc a b == LT)
+	func simplifyF args = case args of
+		[a, b] -> Just $ Leaf $ show (compareHacalc a b == LT)
 		(_) -> Nothing
 
 ruleLessOrEq :: String -> PureSimplificationF
-ruleLessOrEq name = (name, func)
+ruleLessOrEq = stdAnyRule func
 	where
-	func simplifyF t = case t of
-		(Branch [name, a, b]) -> Just $ Leaf $ show (let x = compareHacalc a b in x == LT || x == EQ)
+	func simplifyF args = case args of
+		[a, b] -> Just $ Leaf $ show (let x = compareHacalc a b in x == LT || x == EQ)
 		(_) -> Nothing
 
 ---------------
@@ -225,6 +215,13 @@ stdNumberRule op name t = case t of
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
 		differentOrNothing failcase $ withOp numToTree treeToMaybeNum op failcase rargs
 	where failcase = Leaf name
+
+stdAnyRule :: ((Tree -> Maybe Tree) -> [Tree] -> Maybe Tree) -> String -> PureSimplificationF
+stdAnyRule func name = (name, wrap)
+	where
+	wrap simplifyF t = case t of
+		(Branch (name : args)) -> func simplifyF args
+		(_) -> Nothing
 
 differentOrNothing :: Tree -> Tree -> Maybe Tree
 differentOrNothing failcase t = case t of
