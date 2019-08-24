@@ -82,7 +82,7 @@ treeSizeLim n t = case t of
 				Nothing -> Nothing
 				Just cn -> loop (left - cn) xs
 
-showHistory :: Stdout ctx -> [(String, String)]
+showHistory :: History ctx -> [(String, String)]
 showHistory = map f
 	where f (t, traceElem, ctx) = (stringifyTree0 t, stringifyTraceElem traceElem)
 
