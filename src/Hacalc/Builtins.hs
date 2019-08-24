@@ -2,29 +2,42 @@
 module Hacalc.Builtins where
 
 import Data.Fixed (mod')
-import Data.Ratio (denominator)
+import Data.Ratio (numerator, denominator)
 
 import PatternT.All
 import Hacalc.Types
 import Hacalc.Util
 
 ruleAdd :: String -> PureSimplificationF
-ruleAdd name = (name, const $ stdNumberRule numberAdd name)
-
+ruleAdd = ruleAddLim Nothing
 ruleMul :: String -> PureSimplificationF
-ruleMul name = (name, const $ stdNumberRule numberMul name)
-
+ruleMul = ruleMulLim Nothing
 ruleSub :: String -> PureSimplificationF
-ruleSub name = (name, const $ stdNumberRule numberSub name)
-
+ruleSub = ruleSubLim Nothing
 ruleDiv :: String -> PureSimplificationF
-ruleDiv name = (name, const $ stdNumberRule numberDiv name)
-
+ruleDiv = ruleDivLim Nothing
 rulePow :: String -> PureSimplificationF
-rulePow name = (name, const $ stdNumberRule numberPow name)
-
+rulePow = rulePowLim Nothing
 ruleMod :: String -> PureSimplificationF
-ruleMod name = (name, const $ stdNumberRule numberMod name)
+ruleMod = ruleModLim Nothing
+
+ruleAddLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleAddLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberAdd) name)
+
+ruleMulLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleMulLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMul) name)
+
+ruleSubLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleSubLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberSub) name)
+
+ruleDivLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleDivLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberDiv) name)
+
+rulePowLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+rulePowLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberPow) name)
+
+ruleModLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleModLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMod) name)
 
 ruleEqual :: String -> PureSimplificationF
 ruleEqual = stdAnyRule func
@@ -189,6 +202,23 @@ numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $
 -----------
 -- UTILS --
 -----------
+
+withChecker :: Maybe (Integer, Integer) -> (Number -> Number -> Number) -> (Number -> Number -> Number)
+withChecker mbounds f = case mbounds of
+	Nothing -> f
+	Just (ma, mb) -> \ a b -> if checkBound2 a b ma dmaxa mb dmaxb then f a b else NumberNaN
+		where
+		dmaxa = fromIntegral ma -- ASSUMPTION: fromIntegral (2 ^ 99999) == Infinity, not a GHC error
+		dmaxb = fromIntegral mb
+
+checkBound2 :: Number -> Number -> Integer -> Double -> Integer -> Double -> Bool
+checkBound2 a b imaxa dmaxa imaxb dmaxb = checkBound a imaxa dmaxa && checkBound b imaxb dmaxb
+
+checkBound :: Number -> Integer -> Double -> Bool
+checkBound x imax dmax = case x of
+	NumberFrac x -> (abs (numerator x) < imax) && (denominator x < imax)
+	NumberFloat x -> abs x < dmax -- NOTE: checkBound Infinity _ _ == False
+	NumberNaN {} -> True
 
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> Number -> Number -> Number
 numberDefaultOpTotal f = numberDefaultOp (\ a b -> NumberFrac $ f a b)
