@@ -3,6 +3,7 @@ module Hacalc.Util where
 
 import Data.Coerce (coerce)
 import Data.Char
+import Data.Maybe (isJust)
 import Text.Read (readMaybe)
 import Data.Ratio (denominator, numerator)
 import Numeric (showFFloat, readFloat)
@@ -65,6 +66,21 @@ treeToMaybeNum :: Tree -> Maybe Number
 treeToMaybeNum t = case t of
 	(Leaf s) -> symbolToMaybeNum s
 	(Branch {}) -> Nothing
+
+historyLimitTreeSize :: Int -> [(Tree, b, c)] -> ([(Tree, b, c)], [(Tree, b, c)])
+historyLimitTreeSize limit hist = span (isJust . treeSizeLim limit . fst3) hist
+
+-- If size is less than `n' then (Just size) else Nothing. Lazy
+treeSizeLim :: Int -> Tree -> Maybe Int
+treeSizeLim n t = case t of
+	Leaf {} -> if 1 < n then Just 1 else Nothing
+	Branch xs -> loop (n - 1) xs
+		where
+		loop left childs = case childs of
+			[] -> Just (n - left)
+			(x : xs) -> case treeSizeLim left x of
+				Nothing -> Nothing
+				Just cn -> loop (left - cn) xs
 
 newtype IdentityMonad a = IdentityMonad { unliftIdentityMonad :: a }
 
