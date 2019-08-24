@@ -47,7 +47,7 @@ withText mlimit originalQ ruleText exprText =
 			let r = case mlimit of
 				Nothing -> allr
 				Just n -> take n allr
-			let showed = case r of [] -> line ; xs -> stringifyTree (fst3 (last xs))
+			let showed = case r of [] -> line ; xs -> stringifyTree0 (fst3 (last xs))
 			let answer = if originalQ then line ++ " -> " ++ showed else showed
 			putStrLn $ answer
 

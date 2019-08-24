@@ -69,4 +69,4 @@ interpretRulesAndText ctx rulesText exprText = do
 showHistory :: (Stdout ctx) -> [(String, String)]
 showHistory = map f
 	where
-	f (t, traceElem, ctx) = (stringifyTree t, stringifyTraceElem traceElem)
+	f (t, traceElem, ctx) = (stringifyTree0 t, stringifyTraceElem traceElem)
