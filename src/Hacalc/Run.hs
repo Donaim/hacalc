@@ -88,7 +88,7 @@ hacalcRun options rules ctx line = either
 ---------------------
 
 interpretLine :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> Either ParseError (m (Stdout ctx))
-interpretLine options rules ctx line = hacalcRun options (stackBuildinRules hacalcPureRules rules) ctx line
+interpretLine options rules ctx line = hacalcRun options (stackBuiltinRules hacalcPureRules rules) ctx line
 
 interpretTextWithRules :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> [(String, Either ParseError (m (Stdout ctx)))]
 interpretTextWithRules options rules ctx text = text |> lines |> map (\ line -> (line, interpretLine options rules ctx line))

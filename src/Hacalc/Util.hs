@@ -86,8 +86,8 @@ showHistory :: History ctx -> [(String, String)]
 showHistory = map f
 	where f (t, traceElem, ctx) = (stringifyTree0 t, stringifyTraceElem traceElem)
 
-stackBuildinRules :: (Monad m) => [PureSimplificationF] -> Rulesets -> [[SimplificationF m ctx]]
-stackBuildinRules pures patterns = map (\ ps -> map Right3 pures ++ map Left3 ps) patterns
+stackBuiltinRules :: (Monad m) => [PureSimplificationF] -> Rulesets -> [[SimplificationF m ctx]]
+stackBuiltinRules pures patterns = map (\ ps -> map Right3 pures ++ map Left3 ps) patterns
 
 newtype IdentityMonad a = IdentityMonad { unliftIdentityMonad :: a }
 
