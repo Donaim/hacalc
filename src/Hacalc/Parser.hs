@@ -68,3 +68,24 @@ readOneRuleset lines = do
 	partitioned = partitionEithers mrules
 	okRules     = snd partitioned
 	badRules    = fst partitioned
+
+splitByNumbers :: [Expr] -> [Expr]
+splitByNumbers = concatMap splitLeafByNumber
+
+splitLeafByNumber :: Expr -> [Expr]
+splitLeafByNumber x = case x of
+	(Group xs) -> [Group $ concatMap splitLeafByNumber xs]
+	(Atom s) -> case splitStringByNumber s of
+		([], ys) -> [Atom s]
+		(xs, []) -> [Atom s]
+		(xs, ys) -> [Atom xs, Atom "*", Atom ys]
+
+splitStringByNumber :: String -> (String, String)
+splitStringByNumber s = loop True [] s
+	where
+	loop expectedDot buf s = case s of
+		[] -> (reverse buf, [])
+		(x : xs) ->
+			if isNumber x || (expectedDot && x == '.')
+			then loop (expectedDot || x /= '.') (x : buf) xs
+			else (reverse buf, x : xs)
