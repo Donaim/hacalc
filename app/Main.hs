@@ -55,8 +55,7 @@ withText mlimit originalQ ruleText exprText =
 	mapf (line, result) = case result of
 		Left errors -> putErrLn $ line ++ " -> ERROR: " ++ show errors
 		Right ok -> do
-			(r, droped) <- ok
-			let showed = case r of [] -> line ; xs -> stringifyTree0 (fst3 (last xs))
+			(showed, r, droped) <- ok
 			let answer = if originalQ then line ++ " -> " ++ showed else showed
 			putStrLn $ answer
 

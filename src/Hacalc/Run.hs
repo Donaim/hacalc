@@ -48,8 +48,15 @@ hacalcParse options line = either
 hacalcRunTree :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> Tree -> m (Stdout ctx)
 hacalcRunTree options rules ctx tree = do
 	result <- loop tree rules
-	return (applyLimits result)
+	return (getStdout result)
 	where
+	getStdout result = (lastS, hist, droped)
+		where
+		(hist, droped) = applyLimits result
+		lastTree = if null hist then tree else fst3 (last hist)
+		concated = if displayConcatByNumbersQ options then concatByNumbers lastTree else lastTree
+		lastS = stringifyTree0 concated
+
 	applyLimits hist = (sizes, dropedSizes)
 		where
 		(steps, dropedSteps) = maybe
