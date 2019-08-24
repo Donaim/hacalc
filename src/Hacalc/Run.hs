@@ -45,7 +45,7 @@ hacalcParse options line = either
 		then uncommented
 		else delimitSymbols delimiterMode (parseDelimiters options) uncommented
 
-hacalcRunTree :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> Tree -> m (History ctx, History ctx)
+hacalcRunTree :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> Tree -> m (Stdout ctx)
 hacalcRunTree options rules ctx tree = do
 	result <- loop tree rules
 	return (applyLimits result)
@@ -70,7 +70,7 @@ hacalcRunTree options rules ctx tree = do
 		next <- loop newtree rest
 		return (history ++ next)
 
-hacalcRun :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> String -> Either ParseError (m (History ctx, History ctx))
+hacalcRun :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> String -> Either ParseError (m (Stdout ctx))
 hacalcRun options rules ctx line = either
 	Left
 	(Right . hacalcRunTree options rules ctx)
@@ -80,13 +80,13 @@ hacalcRun options rules ctx line = either
 -- HACALC SPECIFIC --
 ---------------------
 
-interpretLine :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> Either ParseError (m (History ctx, History ctx))
+interpretLine :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> Either ParseError (m (Stdout ctx))
 interpretLine options rules ctx line = hacalcRun options (stackBuildinRules hacalcPureRules rules) ctx line
 
-interpretTextWithRules :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> [(String, Either ParseError (m (History ctx, History ctx)))]
+interpretTextWithRules :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> [(String, Either ParseError (m (Stdout ctx)))]
 interpretTextWithRules options rules ctx text = text |> lines |> map (\ line -> (line, interpretLine options rules ctx line))
 
-interpretRulesAndText :: (Monad m) => InterpretOptions -> String -> ctx -> String -> Either [ParseMatchError] [(String, Either ParseError (m (History ctx, History ctx)))]
+interpretRulesAndText :: (Monad m) => InterpretOptions -> String -> ctx -> String -> Either [ParseMatchError] [(String, Either ParseError (m (Stdout ctx)))]
 interpretRulesAndText options rulesText ctx exprText = do
 	rules <- readPatterns rulesText
 	return (interpretTextWithRules options rules ctx exprText)
