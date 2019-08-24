@@ -69,6 +69,25 @@ readOneRuleset lines = do
 	okRules     = snd partitioned
 	badRules    = fst partitioned
 
+concatByNumbers :: Tree -> Tree
+concatByNumbers t = case t of
+	Branch [Leaf x, Leaf "*", Leaf y] ->
+		if isDecimal x && not (isDecimal y)
+		then Leaf (x ++ y)
+		else t
+	Branch xs -> Branch (map concatByNumbers xs)
+	other -> t
+
+isDecimal :: String -> Bool
+isDecimal x = if null x then False else loop True x
+	where
+	loop expectedDot s = case s of
+		[] -> True
+		(x : xs) ->
+			if isNumber x || (expectedDot && x == '.')
+			then loop (expectedDot || x /= '.') xs
+			else False
+
 splitByNumbers :: [Expr] -> [Expr]
 splitByNumbers = concatMap splitLeafByNumber
 
