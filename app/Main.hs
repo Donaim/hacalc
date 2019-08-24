@@ -33,9 +33,21 @@ load = Load
 putErrLn :: String -> IO ()
 putErrLn = hPutStrLn stderr
 
+runOptions :: InterpretOptions
+runOptions = InterpretOptions
+	{ parseDelimiters                    = hacalcDelimitingSymbols
+	, parseDelimiterPreserveQuotesQ      = True
+	, parseSplitByNumbersQ               = True
+	, parseEnableCommentsQ               = True
+	, displayConcatByNumbersQ            = True
+	, interpretStepLimit                 = Nothing
+	, interpretTreeSizeLimit             = Nothing
+	, interpretCondRecursionLimit        = Just 8
+	}
+
 withText :: Maybe Int -> Bool -> String -> String -> IO ()
 withText mlimit originalQ ruleText exprText =
-	case interpretRulesAndText () ruleText exprText of
+	case interpretRulesAndText runOptions ruleText () exprText of
 		Left e -> putStrLn $ "Rules have syntax errors: " ++ show e
 		Right results -> mapM_ mapf results
 
@@ -43,10 +55,7 @@ withText mlimit originalQ ruleText exprText =
 	mapf (line, result) = case result of
 		Left errors -> putErrLn $ line ++ " -> ERROR: " ++ show errors
 		Right ok -> do
-			allr <- ok
-			let r = case mlimit of
-				Nothing -> allr
-				Just n -> take n allr
+			(r, droped) <- ok
 			let showed = case r of [] -> line ; xs -> stringifyTree0 (fst3 (last xs))
 			let answer = if originalQ then line ++ " -> " ++ showed else showed
 			putStrLn $ answer

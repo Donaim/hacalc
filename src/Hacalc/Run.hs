@@ -11,31 +11,11 @@ import Hacalc.Types
 import Hacalc.Builtins
 import Hacalc.Util
 
-pureRules :: [PureSimplificationF]
-pureRules =
-	[ ruleAdd "$add"
-	, ruleMul "$mult"
-	, ruleSub "$sub"
-	, ruleDiv "$div"
-	, rulePow "$pow"
-	, ruleMod "$mod"
-	, ruleEqual "$equal"
-	, ruleIsNum "$num?"
-	, ruleIsInt "int?"
-	, ruleIsFrac "fraction?"
-	, ruleIsFloat "float?"
-	, ruleFloat "float"
-	, ruleLess "lt?"
-	, ruleLessOrEq "le?"
-	]
+-----------------------
+-- GENERAL INTERFACE --
+-----------------------
 
-delimitingSymbols :: [String]
-delimitingSymbols = ["+", "-", "*", "/", "^"]
-
-mixedRules :: (Monad m) => Rulesets -> [[SimplificationF m ctx]]
-mixedRules patterns = map (\ ps -> map Right3 pureRules ++ map Left3 ps) patterns
-
-data RunOptions = RunOptions
+data InterpretOptions = InterpretOptions
 	{ parseDelimiters                    :: [String]
 	, parseDelimiterPreserveQuotesQ      :: Bool
 	, parseSplitByNumbersQ               :: Bool
@@ -46,10 +26,10 @@ data RunOptions = RunOptions
 	, interpretCondRecursionLimit        :: Maybe Int
 	} deriving (Eq, Show, Read, Typeable, Data)
 
-hacalcRun :: (Monad m) => RunOptions -> [[SimplificationF m ctx]] -> ctx -> String -> Either ParseError (m (Stdout ctx, Stdout ctx))
-hacalcRun options rules ctx line = either
+hacalcParse :: InterpretOptions -> String -> Either ParseError Tree
+hacalcParse options line = either
 	Left
-	(Right . withTokens)
+	(Right . makeTree . Group)
 	(tokenize delimited)
 	where
 	uncommented =
@@ -65,10 +45,11 @@ hacalcRun options rules ctx line = either
 		then uncommented
 		else delimitSymbols delimiterMode (parseDelimiters options) uncommented
 
-	withTokens tokens = do
-		result <- loop (makeTree (Group tokens)) rules
-		return (applyLimits result)
-
+hacalcRunTree :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> Tree -> m (Stdout ctx, Stdout ctx)
+hacalcRunTree options rules ctx tree = do
+	result <- loop tree rules
+	return (applyLimits result)
+	where
 	applyLimits hist = (sizes, dropedSizes)
 		where
 		(steps, dropedSteps) = maybe
@@ -89,37 +70,44 @@ hacalcRun options rules ctx line = either
 		next <- loop newtree rest
 		return (history ++ next)
 
-interpretOneTree :: (Monad m) => ctx -> [[SimplificationF m ctx]] -> Tree -> m (Stdout ctx)
-interpretOneTree ctx rules t = loop t rules
-	where
-	loop tree [] = return []
-	loop tree (ruleset : rest) = do
-		history <- mixedApplySimplificationsUntil0Debug (Just 8) ruleset ctx tree -- NOTE: limit is only 8, deep conditionals will be dropped
-		let newtree = if null history
-			then tree
-			else fst3 (last history)
-		next <- loop newtree rest
-		return (history ++ next)
+hacalcRun :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> String -> Either ParseError (m (Stdout ctx, Stdout ctx))
+hacalcRun options rules ctx line = either
+	Left
+	(Right . hacalcRunTree options rules ctx)
+	(hacalcParse options line)
 
-interpretOneTree0 :: (Monad m) => ctx -> Rulesets -> Tree -> m (Stdout ctx)
-interpretOneTree0 ctx rules = interpretOneTree ctx (mixedRules rules)
+---------------------
+-- HACALC SPECIFIC --
+---------------------
 
-interpretLine :: (Monad m) => ctx -> Rulesets -> String -> Either ParseError (m (Stdout ctx))
-interpretLine ctx rules line = case tokenize (delimitSymbols DelimiterPreserveQuotes delimitingSymbols uncommented) of
-	Left e -> Left e
-	Right tokens -> Right $ interpretOneTree0 ctx rules (makeTree (Group tokens))
-	where uncommented = fst3 $ partitionString "//" line
+interpretLine :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> Either ParseError (m (Stdout ctx, Stdout ctx))
+interpretLine options rules ctx line = hacalcRun options (stackBuildinRules hacalcPureRules rules) ctx line
 
-interpretTextWithRules :: (Monad m) => ctx -> Rulesets -> String -> [(String, Either ParseError (m (Stdout ctx)))]
-interpretTextWithRules ctx rules text =
-	text |> lines |> map (\ line -> (line, interpretLine ctx rules line))
+interpretTextWithRules :: (Monad m) => InterpretOptions -> Rulesets -> ctx -> String -> [(String, Either ParseError (m (Stdout ctx, Stdout ctx)))]
+interpretTextWithRules options rules ctx text = text |> lines |> map (\ line -> (line, interpretLine options rules ctx line))
 
-interpretRulesAndText :: (Monad m) => ctx -> String -> String -> Either [ParseMatchError] [(String, Either ParseError (m (Stdout ctx)))]
-interpretRulesAndText ctx rulesText exprText = do
+interpretRulesAndText :: (Monad m) => InterpretOptions -> String -> ctx -> String -> Either [ParseMatchError] [(String, Either ParseError (m (Stdout ctx, Stdout ctx)))]
+interpretRulesAndText options rulesText ctx exprText = do
 	rules <- readPatterns rulesText
-	return (interpretTextWithRules ctx rules exprText)
+	return (interpretTextWithRules options rules ctx exprText)
 
-showHistory :: (Stdout ctx) -> [(String, String)]
-showHistory = map f
-	where
-	f (t, traceElem, ctx) = (stringifyTree0 t, stringifyTraceElem traceElem)
+hacalcPureRules :: [PureSimplificationF]
+hacalcPureRules =
+	[ ruleAdd        "$add"
+	, ruleMul        "$mult"
+	, ruleSub        "$sub"
+	, ruleDiv        "$div"
+	, rulePow        "$pow"
+	, ruleMod        "$mod"
+	, ruleEqual      "$equal"
+	, ruleIsNum      "$num?"
+	, ruleIsInt      "int?"
+	, ruleIsFrac     "fraction?"
+	, ruleIsFloat    "float?"
+	, ruleFloat      "float"
+	, ruleLess       "lt?"
+	, ruleLessOrEq   "le?"
+	]
+
+hacalcDelimitingSymbols :: [String]
+hacalcDelimitingSymbols = ["+", "-", "*", "/", "^"]
