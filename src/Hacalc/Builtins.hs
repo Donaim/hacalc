@@ -122,6 +122,68 @@ ruleLessOrEq = stdAnyRule func
 		[a, b] -> Just $ Leaf $ show (let x = compareHacalc a b in x == LT || x == EQ)
 		(_) -> Nothing
 
+ruleAlpha :: String -> PureSimplificationF
+ruleAlpha = stdAnyRule func
+	where
+	func simplifyF args = case args of
+		[abstractionPattern, abstractionProjection, body] ->
+			case abstractionProjection of
+				Branch {} -> Nothing
+				Leaf projection ->
+					case exprToMatchPattern (treeToExpr abstractionPattern) of
+						Left e -> Nothing
+						Right match -> Just $ tall match projection body
+		(_) -> Nothing
+
+	getLeafNames :: Tree -> [String]
+	getLeafNames t = case t of
+		Leaf s -> [s]
+		Branch xs -> concat (map getLeafNames xs)
+
+	getFreeNames :: Tree -> [String] -- TODO: optimize dis *angry face*
+	getFreeNames t = filter (`notElem` taken) $ map (\ i -> 'x' : show i) [1 ..]
+		where taken = getLeafNames t
+
+	getAbstractionArgName :: PatternMatchPart -> String -> Tree -> Maybe String
+	getAbstractionArgName match projection t = case matchGetDict match t of
+		Nothing -> Nothing
+		Just d -> case dictGet d projection of
+			Just [Leaf s] -> Just s
+			other -> Nothing -- NOTE: not nice because does not notify of error
+
+	tall :: PatternMatchPart -> String -> Tree -> Tree
+	tall match projection t = loop (getFreeNames t) emptyDict t
+		where
+		loop free scope t = case t of
+			Leaf s -> case dictGet scope s of
+				Just newname -> Leaf newname
+				Nothing -> t
+			Branch xs -> case getAbstractionArgName match projection t of
+				Nothing -> Branch (map (loop free scope) xs)
+				Just name -> Branch (map (loop (tail free) (dictAdd scope name (head free))) xs) -- ASSUMPTION: `free' is infinite
+
+ruleBeta :: String -> PureSimplificationF
+ruleBeta = stdAnyRule func
+	where
+	func simplifyF args = case args of
+		[abstraction, var, body] -> case abstraction of
+			Leaf s -> Just $ mapLeafs (rename s var) body
+			Branch xs -> Nothing -- TODO: allow abstraction argument to be any match pattern
+		(_) -> Nothing
+
+	rename :: String -> Tree -> (String -> Tree -> Tree)
+	rename name var = f
+		where
+		f leafName t =
+			if leafName == name
+			then var
+			else t
+
+	mapLeafs :: (String -> Tree -> Tree) -> Tree -> Tree
+	mapLeafs f t = case t of
+		(Leaf s) -> f s t
+		(Branch xs) -> Branch (map (mapLeafs f) xs)
+
 ---------------
 -- ORDERING --
 ---------------

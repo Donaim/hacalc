@@ -114,6 +114,8 @@ hacalcPureRules =
 	, ruleFloat      "float"
 	, ruleLess       "lt?"
 	, ruleLessOrEq   "le?"
+	, ruleAlpha      "$alpha"
+	, ruleBeta       "$beta"
 	]
 
 hacalcDelimitingSymbols :: [String]
