@@ -141,7 +141,7 @@ ruleAlpha = stdAnyRule func
 		Branch xs -> concat (map getLeafNames xs)
 
 	getFreeNames :: Tree -> [String] -- TODO: optimize dis *angry face*
-	getFreeNames t = filter (`notElem` taken) $ map (\ i -> 'x' : show i) [1 ..]
+	getFreeNames t = filter (`notElem` taken) $ map (\ i -> '$' : show i) [1 ..]
 		where taken = getLeafNames t
 
 	getAbstractionArgName :: PatternMatchPart -> String -> Tree -> Maybe String
