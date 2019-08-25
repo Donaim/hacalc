@@ -18,6 +18,8 @@ import Hacalc.Util
 data InterpretOptions = InterpretOptions
 	{ parseDelimiters                    :: [String]
 	, parseDelimiterPreserveQuotesQ      :: Bool
+	, tokenizeReportBrackets             :: Bool
+	, tokenizeRespectQuotes              :: Bool
 	, parseSplitByNumbersQ               :: Bool
 	, parseEnableCommentsQ               :: Bool
 	, displayConcatByNumbersQ            :: Bool
@@ -30,15 +32,23 @@ hacalcParse :: InterpretOptions -> String -> Either ParseError Tree
 hacalcParse options line = either
 	Left
 	(Right . makeTree . Group)
-	(tokenize delimited)
+	(tokenize tokenizeBracketsOpts tokenizeQuotesOpts delimited)
 	where
+	tokenizeBracketsOpts =
+		if   tokenizeReportBrackets options
+		then TokenizeReportBrackets
+		else TokenizeFixBrackets
+	tokenizeQuotesOpts =
+		if   tokenizeRespectQuotes options
+		then TokenizeRespectQuotes
+		else TokenizeIgnoreQuotes
 	uncommented =
 		if   parseEnableCommentsQ options
 		then fst3 $ partitionString "//" line
 		else line
 	delimiterMode =
 		if   parseDelimiterPreserveQuotesQ options
-		then DelimiterPreserveQuotes
+		then DelimiterRespectQuotes
 		else DelimiterIgnoreQuotes
 	delimited =
 		if   null $ parseDelimiters options

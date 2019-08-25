@@ -37,6 +37,8 @@ runOptions :: InterpretOptions
 runOptions = InterpretOptions
 	{ parseDelimiters                    = hacalcDelimitingSymbols
 	, parseDelimiterPreserveQuotesQ      = True
+	, tokenizeRespectQuotes              = False
+	, tokenizeReportBrackets             = False
 	, parseSplitByNumbersQ               = True
 	, parseEnableCommentsQ               = True
 	, displayConcatByNumbersQ            = True
