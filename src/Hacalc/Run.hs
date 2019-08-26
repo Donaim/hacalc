@@ -16,12 +16,14 @@ import Hacalc.Util
 -----------------------
 
 data InterpretOptions = InterpretOptions
-	{ parseDelimiters                    :: [String]
-	, parseDelimiterPreserveQuotesQ      :: Bool
-	, tokenizeReportBrackets             :: Bool
-	, tokenizeRespectQuotes              :: Bool
-	, parseSplitByNumbersQ               :: Bool
-	, parseEnableCommentsQ               :: Bool
+	{ textDelimiters                     :: [String]
+	, textDelimiterPreserveQuotesQ       :: Bool
+	, textEnableCommentsQ                :: Bool
+	, tokenizeRespectQuotesQ             :: Bool
+	, tokenizeSplitByNumbersQ            :: Bool
+	, parseFixMissingBracketsQ           :: Bool
+	, parseReportMissingEndquoteQ        :: Bool
+	, parseReportEmptyBracketsQ          :: Bool
 	, displayConcatByNumbersQ            :: Bool
 	, interpretStepLimit                 :: Maybe Int
 	, interpretTreeSizeLimit             :: Maybe Int
@@ -32,28 +34,25 @@ hacalcParse :: InterpretOptions -> String -> Either ParseError Tree
 hacalcParse options line = either
 	Left
 	(Right . makeTree . Group)
-	(tokenize tokenizeBracketsOpts tokenizeQuotesOpts delimited)
+	(parse parseOptions $ tokenize (tokenizeRespectQuotesQ options) delimited)
 	where
-	tokenizeBracketsOpts =
-		if   tokenizeReportBrackets options
-		then TokenizeReportBrackets
-		else TokenizeFixBrackets
-	tokenizeQuotesOpts =
-		if   tokenizeRespectQuotes options
-		then TokenizeRespectQuotes
-		else TokenizeIgnoreQuotes
+	parseOptions = ParseOptions
+		{ fixMissingBrackets      = parseFixMissingBracketsQ    options
+		, reportMissingEndQuote   = parseReportMissingEndquoteQ options
+		, reportEmptyBrackets     = parseReportEmptyBracketsQ   options
+		}
 	uncommented =
-		if   parseEnableCommentsQ options
+		if   textEnableCommentsQ options
 		then fst3 $ partitionString "//" line
 		else line
 	delimiterMode =
-		if   parseDelimiterPreserveQuotesQ options
+		if   textDelimiterPreserveQuotesQ options
 		then DelimiterRespectQuotes
 		else DelimiterIgnoreQuotes
 	delimited =
-		if   null $ parseDelimiters options
+		if   null $ textDelimiters options
 		then uncommented
-		else delimitSymbols delimiterMode (parseDelimiters options) uncommented
+		else delimitSymbols delimiterMode (textDelimiters options) uncommented
 
 hacalcRunTree :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> Tree -> m (Stdout ctx)
 hacalcRunTree options rules ctx tree = do

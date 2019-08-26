@@ -35,12 +35,14 @@ putErrLn = hPutStrLn stderr
 
 runOptions :: InterpretOptions
 runOptions = InterpretOptions
-	{ parseDelimiters                    = hacalcDelimitingSymbols
-	, parseDelimiterPreserveQuotesQ      = True
-	, tokenizeRespectQuotes              = False
-	, tokenizeReportBrackets             = False
-	, parseSplitByNumbersQ               = True
-	, parseEnableCommentsQ               = True
+	{ textDelimiters                     = hacalcDelimitingSymbols
+	, textDelimiterPreserveQuotesQ       = False
+	, textEnableCommentsQ                = True
+	, tokenizeRespectQuotesQ             = False
+	, tokenizeSplitByNumbersQ            = True
+	, parseFixMissingBracketsQ           = True
+	, parseReportMissingEndquoteQ        = True
+	, parseReportEmptyBracketsQ          = False
 	, displayConcatByNumbersQ            = True
 	, interpretStepLimit                 = Nothing
 	, interpretTreeSizeLimit             = Nothing
