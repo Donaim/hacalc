@@ -36,9 +36,9 @@ putErrLn = hPutStrLn stderr
 runOptions :: InterpretOptions
 runOptions = InterpretOptions
 	{ textDelimiters                     = hacalcDelimitingSymbols
-	, textDelimiterPreserveQuotesQ       = False
+	, textDelimiterPreserveQuotesQ       = True
 	, textEnableCommentsQ                = True
-	, tokenizeRespectQuotesQ             = False
+	, tokenizeRespectQuotesQ             = True
 	, tokenizeSplitByNumbersQ            = True
 	, parseFixMissingBracketsQ           = True
 	, parseReportMissingEndquoteQ        = True
