@@ -51,6 +51,16 @@ ruleEqual = stdAnyRule func
 					else Just $ Leaf "False"
 		(_) -> Nothing
 
+ruleEq :: String -> PureSimplificationF
+ruleEq = stdAnyRule func
+	where
+	func simplifies args = case args of
+		(x : xs) ->
+			if all (== x) xs
+			then Just $ Leaf "True"
+			else Just $ Leaf "False"
+		(_) -> Nothing
+
 ruleIsNum :: String -> PureSimplificationF
 ruleIsNum = stdAnyRule func
 	where
