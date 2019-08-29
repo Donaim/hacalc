@@ -123,6 +123,7 @@ hacalcPureRules =
 	, ruleEq         "$eq?"
 	, ruleEqualDynLim"$eqn?"
 	, ruleIsNum      "$num?"
+	, ruleIsNan      "$nan?"
 	, ruleIsInt      "$int?"
 	, ruleIsFrac     "$fraction?"
 	, ruleIsFloat    "$float?"

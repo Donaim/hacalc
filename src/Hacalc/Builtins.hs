@@ -68,8 +68,18 @@ ruleIsNum = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case treeToMaybeNum x of
+			Just (NumberNaN {}) -> Just $ Leaf "False"
 			Just n -> Just $ Leaf "True"
 			Nothing -> Just $ Leaf "False"
+		(_) -> Nothing
+
+ruleIsNan :: String -> PureSimplificationF
+ruleIsNan = stdAnyRule func
+	where
+	func simplifyF args = case args of
+		[x] -> case treeToMaybeNum x of
+			Just (NumberNaN {}) -> Just $ Leaf "True"
+			other -> Just $ Leaf "False"
 		(_) -> Nothing
 
 ruleIsInt :: String -> PureSimplificationF
