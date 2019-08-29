@@ -100,11 +100,13 @@ splitLeafByNumber x = case x of
 		(xs, ys) -> [Atom xs, Atom "*", Atom ys]
 
 splitStringByNumber :: String -> (String, String)
-splitStringByNumber s = loop True [] s
+splitStringByNumber original = loop True [] original
 	where
 	loop expectedDot buf s = case s of
 		[] -> (reverse buf, [])
 		(x : xs) ->
-			if isNumber x || (expectedDot && x == '.')
+			if isSpace x
+			then (original, [])
+			else if isNumber x || (expectedDot && x == '.')
 			then loop (expectedDot || x /= '.') (x : buf) xs
 			else (reverse buf, x : xs)

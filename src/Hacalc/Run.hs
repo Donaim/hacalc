@@ -33,7 +33,7 @@ data InterpretOptions = InterpretOptions
 hacalcParse :: InterpretOptions -> String -> Either ParseError Tree
 hacalcParse options line = either
 	Left
-	(Right . makeTree . Group)
+	(Right . makeTree . Group . splitmaybe)
 	(parse parseOptions $ tokenize (tokenizeRespectQuotesQ options) delimited)
 	where
 	parseOptions = ParseOptions
@@ -41,6 +41,10 @@ hacalcParse options line = either
 		, reportMissingEndQuote   = parseReportMissingEndquoteQ options
 		, reportEmptyBrackets     = parseReportEmptyBracketsQ   options
 		}
+	splitmaybe =
+		if   tokenizeSplitByNumbersQ options
+		then splitByNumbers
+		else id
 	uncommented =
 		if   textEnableCommentsQ options
 		then fst3 $ partitionString "//" line
