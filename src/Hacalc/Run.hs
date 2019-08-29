@@ -122,6 +122,7 @@ hacalcPureRules =
 	, ruleEqual      "$equal?"
 	, ruleEq         "$eq?"
 	, ruleEqualDynLim"$eqn?"
+	, ruleOr         "$or"
 	, ruleIsNum      "$num?"
 	, ruleIsNan      "$nan?"
 	, ruleIsInt      "$int?"

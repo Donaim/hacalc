@@ -63,6 +63,14 @@ ruleEqualDynLim = stdAnyRule func
 			Nothing -> Nothing
 		other -> Nothing
 
+ruleOr :: String -> PureSimplificationF
+ruleOr = stdAnyRule func
+	where
+	func simplifyF args = Just . Leaf $
+		if any (== Leaf "True") (map (applySimplificationsUntil0LastFLim 1 (applyFirstSimplificationF simplifyF)) args)
+		then "True"
+		else "False"
+
 ruleIsNum :: String -> PureSimplificationF
 ruleIsNum = stdAnyRule func
 	where
@@ -301,15 +309,15 @@ funcRuleEqual mlim simplifies args = case args of
 	sloop :: (Tree -> Maybe Tree) -> Tree -> Tree
 	sloop = maybe applySimplificationsUntil0LastF (applySimplificationsUntil0LastFLim) mlim
 
-	applySimplificationsUntil0LastFLim :: Integer -> (Tree -> Maybe Tree) -> Tree -> Tree
-	applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
-		where
-		loop n t =
-			if n >= lim
-			then t
-			else case func t of
-				Nothing -> t
-				Just newt -> loop (n + 1) newt
+applySimplificationsUntil0LastFLim :: Integer -> (Tree -> Maybe Tree) -> Tree -> Tree
+applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
+	where
+	loop n t =
+		if n >= lim
+		then t
+		else case func t of
+			Nothing -> t
+			Just newt -> loop (n + 1) newt
 
 numMaybeInt :: Number -> Maybe Integer
 numMaybeInt n = case n of
