@@ -39,9 +39,9 @@ rulePowLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberPow)
 ruleModLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
 ruleModLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMod) name)
 
--- | Like weak head normal form
+-- | Do not simplify at all
 ruleEq :: String -> PureSimplificationF
-ruleEq = ruleEqualLim (Just 1)
+ruleEq = ruleEqualLim (Just 0)
 
 -- | Normal form, careful - not decidable
 ruleEqual :: String -> PureSimplificationF
