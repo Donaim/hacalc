@@ -39,27 +39,29 @@ rulePowLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberPow)
 ruleModLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
 ruleModLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMod) name)
 
-ruleEqual :: String -> PureSimplificationF
-ruleEqual = stdAnyRule func
-	where
-	func simplifies args = case args of
-		(x : xs) ->
-			let simplifiedxs = map (applySimplificationsUntil0LastF (applyFirstSimplificationF simplifies)) xs
-			in let simplifiedx = applySimplificationsUntil0LastF (applyFirstSimplificationF simplifies) x
-				in if all (== simplifiedx) simplifiedxs
-					then Just $ Leaf "True"
-					else Just $ Leaf "False"
-		(_) -> Nothing
-
+-- | Like weak head normal form
 ruleEq :: String -> PureSimplificationF
-ruleEq = stdAnyRule func
+ruleEq = ruleEqualLim (Just 1)
+
+-- | Normal form, careful - not decidable
+ruleEqual :: String -> PureSimplificationF
+ruleEqual = ruleEqualLim Nothing
+
+-- | Arbitrary depth equality
+ruleEqualLim :: Maybe Integer -> String -> PureSimplificationF
+ruleEqualLim mlim = stdAnyRule (funcRuleEqual mlim)
+
+-- | Dynamic arbitrary depth equality
+ruleEqualDynLim :: String -> PureSimplificationF
+ruleEqualDynLim = stdAnyRule func
 	where
-	func simplifies args = case args of
-		(x : xs) ->
-			if all (== x) xs
-			then Just $ Leaf "True"
-			else Just $ Leaf "False"
-		(_) -> Nothing
+	func simplifyF args = case args of
+		(n : x : xs) -> case treeToMaybeNum n of
+			Just n -> case numMaybeInt n of
+				Just n -> funcRuleEqual (Just n) simplifyF (x : xs)
+				Nothing -> Nothing
+			Nothing -> Nothing
+		other -> Nothing
 
 ruleIsNum :: String -> PureSimplificationF
 ruleIsNum = stdAnyRule func
@@ -274,6 +276,36 @@ numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $
 -----------
 -- UTILS --
 -----------
+
+funcRuleEqual :: Maybe Integer -> [Tree -> Maybe Tree] -> [Tree] -> Maybe Tree
+funcRuleEqual mlim simplifies args = case args of
+	(x : xs) ->
+		let simplifiedxs = map (sloop (applyFirstSimplificationF simplifies)) xs
+		in let simplifiedx = sloop (applyFirstSimplificationF simplifies) x
+			in if all (== simplifiedx) simplifiedxs
+				then Just $ Leaf "True"
+				else Just $ Leaf "False"
+	(_) -> Nothing
+
+	where
+	sloop :: (Tree -> Maybe Tree) -> Tree -> Tree
+	sloop = maybe applySimplificationsUntil0LastF (applySimplificationsUntil0LastFLim) mlim
+
+	applySimplificationsUntil0LastFLim :: Integer -> (Tree -> Maybe Tree) -> Tree -> Tree
+	applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
+		where
+		loop n t =
+			if n >= lim
+			then t
+			else case func t of
+				Nothing -> t
+				Just newt -> loop (n + 1) newt
+
+numMaybeInt :: Number -> Maybe Integer
+numMaybeInt n = case n of
+	NumberNaN {} -> Nothing
+	NumberFrac x -> if denominator x == 1 then Just (numerator x) else Nothing
+	NumberFloat x -> if x == fromInteger (round x) then Just (round x) else Nothing
 
 withChecker :: Maybe (Integer, Integer) -> (Number -> Number -> Number) -> (Number -> Number -> Number)
 withChecker mbounds f = case mbounds of

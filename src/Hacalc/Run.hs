@@ -117,6 +117,7 @@ hacalcPureRules =
 	, ruleMod        "$mod"
 	, ruleEqual      "$equal?"
 	, ruleEq         "$eq?"
+	, ruleEqualDynLim"$eqn?"
 	, ruleIsNum      "$num?"
 	, ruleIsInt      "$int?"
 	, ruleIsFrac     "$fraction?"
