@@ -225,26 +225,13 @@ compareHacalc a b =
 		(Leaf as) -> case b of
 			(Leaf bs) ->
 				compareLeafs as bs
-			(Branch []) ->
-				GT
-			(Branch (x : xs)) ->
-				case symbolToMaybeNum as of
-					Just {} -> LT
-					Nothing ->
-						let cmp = compareHacalc a x -- NOTE: b < (a b c d)
-						in if cmp == EQ then LT else cmp
-		(Branch []) -> case b of
-			(Branch []) -> EQ
-			other -> LT
+			(Branch {}) ->
+				LT -- ASSUMPTION: no singleton branches
 		(Branch xs) -> case b of
-			(Leaf bs) ->
-				case symbolToMaybeNum bs of
-					Just {} -> GT
-					Nothing ->
-						let cmp = compareHacalc (head xs) b
-						in if cmp == EQ then GT else cmp
+			(Leaf {}) ->
+				GT -- ASSUMPTION: no singleton branches
 			(Branch ys) ->
-				compareHacalcList xs ys -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
+				compareHacalcList (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
 
 compareNumbers :: Number -> Number -> Ordering
 compareNumbers a b = case a of
