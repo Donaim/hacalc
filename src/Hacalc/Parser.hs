@@ -38,26 +38,26 @@ splitRulesets lines = loop [] [] lines
 		then loop ((reverse cur) : buf) [] xs
 		else loop buf (x : cur) xs
 
-readPatterns :: String -> Either [ParseMatchError] [[SimplifyPattern]]
+readPatterns :: String -> Either [ParseMatchError] [[HSimplifyPattern]]
 readPatterns = readPatternsL . splitLines
 
-readPatternsL :: [String] -> Either [ParseMatchError] [[SimplifyPattern]]
+readPatternsL :: [String] -> Either [ParseMatchError] [[HSimplifyPattern]]
 readPatternsL allLines = do
 	unless (null badReads) (Left badReads)
 	return (snd partitioned)
 	where
 	rulesets = splitRulesets allLines
 
-	reads :: [Either [ParseMatchError] [SimplifyPattern]]
+	reads :: [Either [ParseMatchError] [HSimplifyPattern]]
 	reads = map readOneRuleset rulesets
 
-	partitioned :: ([[ParseMatchError]], [[SimplifyPattern]])
+	partitioned :: ([[ParseMatchError]], [[HSimplifyPattern]])
 	partitioned = partitionEithers reads
 
 	badReads :: [ParseMatchError]
 	badReads = concat $ fst partitioned
 
-readOneRuleset :: [String] -> Either [ParseMatchError] [SimplifyPattern]
+readOneRuleset :: [String] -> Either [ParseMatchError] [HSimplifyPattern]
 readOneRuleset lines = do
 	unless (null badRules) (Left badRules)
 	return okRules
@@ -69,17 +69,17 @@ readOneRuleset lines = do
 	okRules     = snd partitioned
 	badRules    = fst partitioned
 
-concatByNumbers :: Tree -> Tree
+concatByNumbers :: HTree -> HTree
 concatByNumbers t = case t of
-	Branch [Leaf x, Leaf "*", Leaf y] ->
-		if isDecimal x && not (isDecimal y)
-		then Leaf (x ++ y)
+	Branch [Leaf x, Leaf maybeMult, Leaf y] ->
+		if show maybeMult == "*" && isDecimal x && not (isDecimal y)
+		then Leaf (read $ show x ++ show y)
 		else t
 	Branch xs -> Branch (map concatByNumbers xs)
 	other -> t
 
-isDecimal :: String -> Bool
-isDecimal x = if null x then False else loop True x
+isDecimal :: HLeafType -> Bool
+isDecimal orig = let x = show orig in if null x then False else loop True x
 	where
 	loop expectedDot s = case s of
 		[] -> True

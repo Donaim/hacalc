@@ -43,35 +43,37 @@ showNoZeroes x = if anydotq then striped else s
 showFullPrecision :: (RealFloat a) => a -> String
 showFullPrecision x = showFFloat Nothing x ""
 
-numToTree :: Number -> Tree
+numToTree :: Number -> HTree
 numToTree x = case x of
-	NumberNaN -> Leaf "NaN"
-	NumberFloat x -> Leaf (showNoZeroes x)
+	NumberNaN -> Leaf (read "NaN")
+	NumberFloat x -> Leaf (read (showNoZeroes x))
 	NumberFrac x ->
 		if denominator x == 1
-		then Leaf (show $ numerator x)
-		else Leaf (show x)
+		then Leaf (read $ show $ numerator x)
+		else Leaf (read $ show x)
 
-symbolToMaybeNum :: Symbol -> Maybe Number
-symbolToMaybeNum s =
-	if s == "NaN" || s == "Infinity"
-	then Just NumberNaN
-	else case readMaybe s :: Maybe Rational of
-		Just x -> Just (NumberFrac x)
-		Nothing -> case readMaybe s :: Maybe Double of
-			Just x -> Just (NumberFloat x)
-			Nothing -> Nothing
+leafElemToMaybeNum :: HLeafType -> Maybe Number
+leafElemToMaybeNum orig = onstring (show orig)
+	where
+	onstring s =
+		if s == "NaN" || s == "Infinity"
+		then Just NumberNaN
+		else case readMaybe s :: Maybe Rational of
+			Just x -> Just (NumberFrac x)
+			Nothing -> case readMaybe s :: Maybe Double of
+				Just x -> Just (NumberFloat x)
+				Nothing -> Nothing
 
-treeToMaybeNum :: Tree -> Maybe Number
+treeToMaybeNum :: HTree -> Maybe Number
 treeToMaybeNum t = case t of
-	(Leaf s) -> symbolToMaybeNum s
+	(Leaf s) -> leafElemToMaybeNum s
 	(Branch {}) -> Nothing
 
-historyLimitTreeSize :: Int -> [(Tree, b, c)] -> ([(Tree, b, c)], [(Tree, b, c)])
+historyLimitTreeSize :: Int -> [(HTree, b, c)] -> ([(HTree, b, c)], [(HTree, b, c)])
 historyLimitTreeSize limit hist = span (isJust . treeSizeLim limit . fst3) hist
 
 -- If size is less than `n' then (Just size) else Nothing. Lazy
-treeSizeLim :: Int -> Tree -> Maybe Int
+treeSizeLim :: Int -> HTree -> Maybe Int
 treeSizeLim n t = case t of
 	Leaf {} -> if 1 < n then Just 1 else Nothing
 	Branch xs -> loop (n - 1) xs
@@ -86,7 +88,7 @@ showHistory :: History ctx -> [(String, String)]
 showHistory = map f
 	where f (t, traceElem, ctx) = (stringifyTree0 t, stringifyTraceElem traceElem)
 
-stackBuiltinRules :: (Monad m) => [PureSimplificationF] -> Rulesets -> [[SimplificationF m ctx]]
+stackBuiltinRules :: (Monad m) => [HPureSimplificationF] -> Rulesets -> [[HSimplificationF m ctx]]
 stackBuiltinRules pures patterns = map (\ ps -> map Right3 pures ++ map Left3 ps) patterns
 
 newtype IdentityMonad a = IdentityMonad { unliftIdentityMonad :: a }

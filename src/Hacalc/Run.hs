@@ -30,7 +30,7 @@ data InterpretOptions = InterpretOptions
 	, interpretCondRecursionLimit        :: Maybe Int
 	} deriving (Eq, Show, Read, Typeable, Data)
 
-hacalcParse :: InterpretOptions -> String -> Either ParseError Tree
+hacalcParse :: InterpretOptions -> String -> Either ParseError HTree
 hacalcParse options line = either
 	Left
 	(Right . makeTree . Group . splitmaybe)
@@ -58,7 +58,7 @@ hacalcParse options line = either
 		then uncommented
 		else delimitSymbols delimiterMode (textDelimiters options) uncommented
 
-hacalcRunTree :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> Tree -> m (Stdout ctx)
+hacalcRunTree :: (Monad m) => InterpretOptions -> [[HSimplificationF m ctx]] -> ctx -> HTree -> m (Stdout ctx)
 hacalcRunTree options rules ctx tree = do
 	result <- loop tree rules
 	return (getStdout result)
@@ -90,7 +90,7 @@ hacalcRunTree options rules ctx tree = do
 		next <- loop newtree rest
 		return (history ++ next)
 
-hacalcRun :: (Monad m) => InterpretOptions -> [[SimplificationF m ctx]] -> ctx -> String -> Either ParseError (m (Stdout ctx))
+hacalcRun :: (Monad m) => InterpretOptions -> [[HSimplificationF m ctx]] -> ctx -> String -> Either ParseError (m (Stdout ctx))
 hacalcRun options rules ctx line = either
 	Left
 	(Right . hacalcRunTree options rules ctx)
@@ -111,7 +111,7 @@ interpretRulesAndText options rulesText ctx exprText = do
 	rules <- readPatterns rulesText
 	return (interpretTextWithRules options rules ctx exprText)
 
-hacalcPureRules :: [PureSimplificationF]
+hacalcPureRules :: [HPureSimplificationF]
 hacalcPureRules =
 	[ ruleAdd        "$add"
 	, ruleMul        "$mul"

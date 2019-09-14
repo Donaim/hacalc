@@ -8,51 +8,51 @@ import PatternT.All
 import Hacalc.Types
 import Hacalc.Util
 
-ruleAdd :: String -> PureSimplificationF
+ruleAdd :: String -> HPureSimplificationF
 ruleAdd = ruleAddLim Nothing
-ruleMul :: String -> PureSimplificationF
+ruleMul :: String -> HPureSimplificationF
 ruleMul = ruleMulLim Nothing
-ruleSub :: String -> PureSimplificationF
+ruleSub :: String -> HPureSimplificationF
 ruleSub = ruleSubLim Nothing
-ruleDiv :: String -> PureSimplificationF
+ruleDiv :: String -> HPureSimplificationF
 ruleDiv = ruleDivLim Nothing
-rulePow :: String -> PureSimplificationF
+rulePow :: String -> HPureSimplificationF
 rulePow = rulePowLim Nothing
-ruleMod :: String -> PureSimplificationF
+ruleMod :: String -> HPureSimplificationF
 ruleMod = ruleModLim Nothing
 
-ruleAddLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleAddLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 ruleAddLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberAdd) name)
 
-ruleMulLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleMulLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 ruleMulLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMul) name)
 
-ruleSubLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleSubLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 ruleSubLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberSub) name)
 
-ruleDivLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleDivLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 ruleDivLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberDiv) name)
 
-rulePowLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+rulePowLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 rulePowLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberPow) name)
 
-ruleModLim :: Maybe (Integer, Integer) -> String -> PureSimplificationF
+ruleModLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 ruleModLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMod) name)
 
 -- | Do not simplify at all
-ruleEq :: String -> PureSimplificationF
+ruleEq :: String -> HPureSimplificationF
 ruleEq = ruleEqualLim (Just 0)
 
 -- | Normal form, careful - not decidable
-ruleEqual :: String -> PureSimplificationF
+ruleEqual :: String -> HPureSimplificationF
 ruleEqual = ruleEqualLim Nothing
 
 -- | Arbitrary depth equality
-ruleEqualLim :: Maybe Integer -> String -> PureSimplificationF
+ruleEqualLim :: Maybe Integer -> String -> HPureSimplificationF
 ruleEqualLim mlim = stdAnyRule (funcRuleEqual mlim)
 
 -- | Dynamic arbitrary depth equality
-ruleEqualDynLim :: String -> PureSimplificationF
+ruleEqualDynLim :: String -> HPureSimplificationF
 ruleEqualDynLim = stdAnyRule func
 	where
 	func simplifyF args = case args of
@@ -63,70 +63,70 @@ ruleEqualDynLim = stdAnyRule func
 			Nothing -> Nothing
 		other -> Nothing
 
-ruleOr :: String -> PureSimplificationF
+ruleOr :: String -> HPureSimplificationF
 ruleOr = stdAnyRule func
 	where
-	func simplifyF args = Just . Leaf $
-		if any (== Leaf "True") (map (applySimplificationsUntil0LastFLim 1 (applyFirstSimplificationF simplifyF)) args)
-		then "True"
-		else "False"
+	func simplifyF args = Just $
+		if any (== trueLeaf) (map (applySimplificationsUntil0LastFLim 1 (applyFirstSimplificationF simplifyF)) args)
+		then trueLeaf
+		else falseLeaf
 
-ruleIsNum :: String -> PureSimplificationF
+ruleIsNum :: String -> HPureSimplificationF
 ruleIsNum = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case treeToMaybeNum x of
-			Just (NumberNaN {}) -> Just $ Leaf "False"
-			Just n -> Just $ Leaf "True"
-			Nothing -> Just $ Leaf "False"
+			Just (NumberNaN {}) -> Just $ falseLeaf
+			Just n -> Just $ trueLeaf
+			Nothing -> Just $ falseLeaf
 		(_) -> Nothing
 
-ruleIsNan :: String -> PureSimplificationF
+ruleIsNan :: String -> HPureSimplificationF
 ruleIsNan = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case treeToMaybeNum x of
-			Just (NumberNaN {}) -> Just $ Leaf "True"
-			other -> Just $ Leaf "False"
+			Just (NumberNaN {}) -> Just $ trueLeaf
+			other -> Just $ falseLeaf
 		(_) -> Nothing
 
-ruleIsInt :: String -> PureSimplificationF
+ruleIsInt :: String -> HPureSimplificationF
 ruleIsInt = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case treeToMaybeNum x of
 			Just n -> Just $ case n of
-				NumberNaN {} -> Leaf "False"
-				NumberFloat x -> Leaf (if x == fromInteger (round x) then "True" else "False")
-				NumberFrac x -> Leaf (if denominator x == 1 then "True" else "False")
+				NumberNaN {} -> falseLeaf
+				NumberFloat x -> if x == fromInteger (round x) then trueLeaf else falseLeaf
+				NumberFrac x -> if denominator x == 1 then trueLeaf else falseLeaf
 			Nothing -> Nothing
 		(_) -> Nothing
 
-ruleIsFrac :: String -> PureSimplificationF
+ruleIsFrac :: String -> HPureSimplificationF
 ruleIsFrac = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case treeToMaybeNum x of
 			Just n -> Just $ case n of
-				NumberNaN {} -> Leaf "False"
-				NumberFloat x -> Leaf "False"
-				NumberFrac x -> Leaf (if denominator x == 1 then "False" else "True")
+				NumberNaN {} -> falseLeaf
+				NumberFloat x -> falseLeaf
+				NumberFrac x -> if denominator x == 1 then falseLeaf else trueLeaf
 			Nothing -> Nothing
 		(_) -> Nothing
 
-ruleIsFloat :: String -> PureSimplificationF
+ruleIsFloat :: String -> HPureSimplificationF
 ruleIsFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case treeToMaybeNum x of
 			Just n -> Just $ case n of
-				NumberNaN {} -> Leaf "False"
-				NumberFloat x -> Leaf (if x == fromInteger (round x) then "False" else "True")
-				NumberFrac x -> Leaf "False"
+				NumberNaN {} -> falseLeaf
+				NumberFloat x -> if x == fromInteger (round x) then falseLeaf else trueLeaf
+				NumberFrac x -> falseLeaf
 			Nothing -> Nothing
 		(_) -> Nothing
 
-ruleFloat :: String -> PureSimplificationF
+ruleFloat :: String -> HPureSimplificationF
 ruleFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
@@ -138,21 +138,21 @@ ruleFloat = stdAnyRule func
 			Nothing -> Nothing
 		(_) -> Nothing
 
-ruleLess :: String -> PureSimplificationF
+ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[a, b] -> Just $ Leaf $ show (compareHacalc a b == LT)
+		[a, b] -> Just $ if (compareHacalc a b == LT) then trueLeaf else falseLeaf
 		(_) -> Nothing
 
-ruleLessOrEq :: String -> PureSimplificationF
+ruleLessOrEq :: String -> HPureSimplificationF
 ruleLessOrEq = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[a, b] -> Just $ Leaf $ show (let x = compareHacalc a b in x == LT || x == EQ)
+		[a, b] -> Just $ if (let x = compareHacalc a b in x == LT || x == EQ) then trueLeaf else falseLeaf
 		(_) -> Nothing
 
-ruleAlpha :: String -> PureSimplificationF
+ruleAlpha :: String -> HPureSimplificationF
 ruleAlpha = stdAnyRule func
 	where
 	func simplifyF args = case args of
@@ -162,37 +162,37 @@ ruleAlpha = stdAnyRule func
 				Leaf projection ->
 					case exprToMatchPattern (treeToExpr abstractionPattern) of
 						Left e -> Nothing
-						Right match -> Just $ tall match projection body
+						Right match -> Just $ tall match (show projection) body
 		(_) -> Nothing
 
-	getLeafNames :: Tree -> [String]
+	getLeafNames :: HTree -> [String]
 	getLeafNames t = case t of
-		Leaf s -> [s]
+		Leaf s -> [show s]
 		Branch xs -> concat (map getLeafNames xs)
 
-	getFreeNames :: Tree -> [String] -- TODO: optimize dis *angry face*
+	getFreeNames :: HTree -> [String] -- TODO: optimize dis *angry face*
 	getFreeNames t = filter (`notElem` taken) $ map (\ i -> '$' : show i) [1 ..]
 		where taken = getLeafNames t
 
-	getAbstractionArgName :: PatternMatchPart -> String -> Tree -> Maybe String
+	getAbstractionArgName :: PatternMatchPart HLeafType -> String -> HTree -> Maybe String
 	getAbstractionArgName match projection t = case matchGetDict match t of
 		Nothing -> Nothing
-		Just d -> case dictGet d projection of
-			Just [Leaf s] -> Just s
+		Just d -> case dictGet d (read projection) of
+			Just [Leaf s] -> Just (show s)
 			other -> Nothing -- NOTE: not nice because does not notify of error
 
-	tall :: PatternMatchPart -> String -> Tree -> Tree
+	tall :: PatternMatchPart HLeafType -> String -> HTree -> HTree
 	tall match projection t = loop (getFreeNames t) emptyDict t
 		where
 		loop free scope t = case t of
 			Leaf s -> case dictGet scope s of
-				Just newname -> Leaf newname
+				Just newname -> Leaf (read newname)
 				Nothing -> t
 			Branch xs -> case getAbstractionArgName match projection t of
 				Nothing -> Branch (map (loop free scope) xs)
-				Just name -> Branch (map (loop (tail free) (dictAdd scope name (head free))) xs) -- ASSUMPTION: `free' is infinite
+				Just name -> Branch (map (loop (tail free) (dictAdd scope (read name) (head free))) xs) -- ASSUMPTION: `free' is infinite
 
-ruleBeta :: String -> PureSimplificationF
+ruleBeta :: String -> HPureSimplificationF
 ruleBeta = stdAnyRule func
 	where
 	func simplifyF args = case args of
@@ -201,7 +201,7 @@ ruleBeta = stdAnyRule func
 			Branch xs -> Nothing -- TODO: allow abstraction argument to be any match pattern
 		(_) -> Nothing
 
-	rename :: String -> Tree -> (String -> Tree -> Tree)
+	rename :: HLeafType -> HTree -> (HLeafType -> HTree -> HTree)
 	rename name var = f
 		where
 		f leafName t =
@@ -209,7 +209,7 @@ ruleBeta = stdAnyRule func
 			then var
 			else t
 
-	mapLeafs :: (String -> Tree -> Tree) -> Tree -> Tree
+	mapLeafs :: (HLeafType -> HTree -> HTree) -> HTree -> HTree
 	mapLeafs f t = case t of
 		(Leaf s) -> f s t
 		(Branch xs) -> Branch (map (mapLeafs f) xs)
@@ -219,7 +219,7 @@ ruleBeta = stdAnyRule func
 ---------------
 
 -- Comparison that is aware of numbers
-compareHacalc :: Tree -> Tree -> Ordering
+compareHacalc :: HTree -> HTree -> Ordering
 compareHacalc a b =
 	case a of
 		(Leaf as) -> case b of
@@ -248,17 +248,17 @@ compareNumbers a b = case a of
 		NumberFloat {} -> GT
 		NumberNaN {} -> EQ
 
-compareLeafs :: Symbol -> Symbol -> Ordering
+compareLeafs :: HLeafType -> HLeafType -> Ordering
 compareLeafs a b =
-	case symbolToMaybeNum a of
-		Nothing -> case symbolToMaybeNum b of
+	case leafElemToMaybeNum a of
+		Nothing -> case leafElemToMaybeNum b of
 			Nothing -> compare a b
 			Just bn -> GT
-		Just an -> case symbolToMaybeNum b of
+		Just an -> case leafElemToMaybeNum b of
 			Nothing -> LT
 			Just bn -> compareNumbers an bn
 
-compareHacalcList :: [Tree] -> [Tree] -> Ordering
+compareHacalcList :: [HTree] -> [HTree] -> Ordering
 compareHacalcList [] [] = EQ
 compareHacalcList xs [] = GT
 compareHacalcList [] ys = LT
@@ -295,21 +295,27 @@ numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $
 -- UTILS --
 -----------
 
-funcRuleEqual :: Maybe Integer -> [Tree -> Maybe Tree] -> [Tree] -> Maybe Tree
+trueLeaf :: HTree
+trueLeaf = Leaf (read "True")
+
+falseLeaf :: HTree
+falseLeaf = Leaf (read "False")
+
+funcRuleEqual :: Maybe Integer -> [HTree -> Maybe HTree] -> [HTree] -> Maybe HTree
 funcRuleEqual mlim simplifies args = case args of
 	(x : xs) ->
 		let simplifiedxs = map (sloop (applyFirstSimplificationF simplifies)) xs
 		in let simplifiedx = sloop (applyFirstSimplificationF simplifies) x
 			in if all (== simplifiedx) simplifiedxs
-				then Just $ Leaf "True"
-				else Just $ Leaf "False"
+				then Just $ trueLeaf
+				else Just $ falseLeaf
 	(_) -> Nothing
 
 	where
-	sloop :: (Tree -> Maybe Tree) -> Tree -> Tree
+	sloop :: (HTree -> Maybe HTree) -> HTree -> HTree
 	sloop = maybe applySimplificationsUntil0LastF (applySimplificationsUntil0LastFLim) mlim
 
-applySimplificationsUntil0LastFLim :: Integer -> (Tree -> Maybe Tree) -> Tree -> Tree
+applySimplificationsUntil0LastFLim :: Integer -> (HTree -> Maybe HTree) -> HTree -> HTree
 applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
 	where
 	loop n t =
@@ -358,22 +364,22 @@ numberDefaultOp op a b =
 			NumberFrac b -> op (toRationalPrecise a) b
 			NumberFloat b -> op (toRationalPrecise a) (toRationalPrecise b)
 
-stdNumberRule :: (Number -> Number -> Number) -> String -> Tree -> Maybe Tree
+stdNumberRule :: (Number -> Number -> Number) -> String -> HTree -> Maybe HTree
 stdNumberRule op name t = case t of
 	Leaf x -> Nothing
 	(Branch []) -> Nothing
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
 		differentOrNothing failcase $ withOp numToTree treeToMaybeNum op failcase rargs
-	where failcase = Leaf name
+	where failcase = Leaf (read name)
 
-stdAnyRule :: ([Tree -> Maybe Tree] -> [Tree] -> Maybe Tree) -> String -> PureSimplificationF
+stdAnyRule :: ([HTree -> Maybe HTree] -> [HTree] -> Maybe HTree) -> String -> HPureSimplificationF
 stdAnyRule func name = (name, wrap)
 	where
 	wrap simplifies t = case t of
 		(Branch (name : args)) -> func simplifies args
 		(_) -> Nothing
 
-differentOrNothing :: Tree -> Tree -> Maybe Tree
+differentOrNothing :: HTree -> HTree -> Maybe HTree
 differentOrNothing failcase t = case t of
 	(Branch (x : xs)) ->
 		if x == failcase
@@ -381,24 +387,24 @@ differentOrNothing failcase t = case t of
 		else Just t
 	(_) -> Just t
 
-castAll :: (Tree -> Maybe a) -> [Tree] -> [Either Tree a]
+castAll :: (HTree -> Maybe a) -> [HTree] -> [Either HTree a]
 castAll from = map mapf
 	where
 	mapf t = case from t of
 		Just x -> Right x
 		Nothing -> Left t
 
-withOp :: (a -> Tree) -> (Tree -> Maybe a) -> (a -> a -> a) -> Tree -> [Tree] -> Tree
+withOp :: (a -> HTree) -> (HTree -> Maybe a) -> (a -> a -> a) -> HTree -> [HTree] -> HTree
 withOp to from op failcase rargs = case withOpOnMaybeNums to op failcase numcasted of
 	[] -> failcase
 	[x] -> x
 	xs -> (Branch xs)
 	where numcasted = castAll from rargs
 
-withOpOnMaybeNums :: (a -> Tree) -> (a -> a -> a) -> Tree -> [Either Tree a] -> [Tree]
+withOpOnMaybeNums :: (a -> HTree) -> (a -> a -> a) -> HTree -> [Either HTree a] -> [HTree]
 withOpOnMaybeNums to op failcase mnums = loop Nothing mnums
 	where
-	-- loop :: Maybe Number -> [Either Tree Number] -> [Tree]
+	-- loop :: Maybe Number -> [Either HTree Number] -> [HTree]
 	loop macc [] = case macc of
 		Nothing -> []
 		Just acc -> [to acc]
