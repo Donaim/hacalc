@@ -45,15 +45,15 @@ showFullPrecision x = showFFloat Nothing x ""
 
 numToTree :: Number -> HTree
 numToTree x = case x of
-	NumberNaN -> Leaf (read "NaN")
-	NumberFloat x -> Leaf (read (showNoZeroes x))
+	NumberNaN -> Leaf (patternElemRead "NaN")
+	NumberFloat x -> Leaf (patternElemRead (showNoZeroes x))
 	NumberFrac x ->
 		if denominator x == 1
-		then Leaf (read $ show $ numerator x)
-		else Leaf (read $ show x)
+		then Leaf (patternElemRead $ show $ numerator x)
+		else Leaf (patternElemRead $ show x)
 
 leafElemToMaybeNum :: HLeafType -> Maybe Number
-leafElemToMaybeNum orig = onstring (show orig)
+leafElemToMaybeNum orig = onstring (patternElemShow orig)
 	where
 	onstring s =
 		if s == "NaN" || s == "Infinity"

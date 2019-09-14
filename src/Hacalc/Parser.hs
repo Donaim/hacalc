@@ -72,14 +72,14 @@ readOneRuleset lines = do
 concatByNumbers :: HTree -> HTree
 concatByNumbers t = case t of
 	Branch [Leaf x, Leaf maybeMult, Leaf y] ->
-		if show maybeMult == "*" && isDecimal x && not (isDecimal y)
-		then Leaf (read $ show x ++ show y)
+		if patternElemShow maybeMult == "*" && isDecimal x && not (isDecimal y)
+		then Leaf (patternElemRead $ patternElemShow x ++ patternElemShow y)
 		else t
 	Branch xs -> Branch (map concatByNumbers xs)
 	other -> t
 
 isDecimal :: HLeafType -> Bool
-isDecimal orig = let x = show orig in if null x then False else loop True x
+isDecimal orig = let x = patternElemShow orig in if null x then False else loop True x
 	where
 	loop expectedDot s = case s of
 		[] -> True

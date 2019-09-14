@@ -162,12 +162,12 @@ ruleAlpha = stdAnyRule func
 				Leaf projection ->
 					case exprToMatchPattern (treeToExpr abstractionPattern) of
 						Left e -> Nothing
-						Right match -> Just $ tall match (show projection) body
+						Right match -> Just $ tall match (patternElemShow projection) body
 		(_) -> Nothing
 
 	getLeafNames :: HTree -> [String]
 	getLeafNames t = case t of
-		Leaf s -> [show s]
+		Leaf s -> [patternElemShow s]
 		Branch xs -> concat (map getLeafNames xs)
 
 	getFreeNames :: HTree -> [String] -- TODO: optimize dis *angry face*
@@ -177,8 +177,8 @@ ruleAlpha = stdAnyRule func
 	getAbstractionArgName :: PatternMatchPart HLeafType -> String -> HTree -> Maybe String
 	getAbstractionArgName match projection t = case matchGetDict match t of
 		Nothing -> Nothing
-		Just d -> case dictGet d (read projection) of
-			Just [Leaf s] -> Just (show s)
+		Just d -> case dictGet d (patternElemRead projection) of
+			Just [Leaf s] -> Just (patternElemShow s)
 			other -> Nothing -- NOTE: not nice because does not notify of error
 
 	tall :: PatternMatchPart HLeafType -> String -> HTree -> HTree
@@ -186,11 +186,11 @@ ruleAlpha = stdAnyRule func
 		where
 		loop free scope t = case t of
 			Leaf s -> case dictGet scope s of
-				Just newname -> Leaf (read newname)
+				Just newname -> Leaf (patternElemRead newname)
 				Nothing -> t
 			Branch xs -> case getAbstractionArgName match projection t of
 				Nothing -> Branch (map (loop free scope) xs)
-				Just name -> Branch (map (loop (tail free) (dictAdd scope (read name) (head free))) xs) -- ASSUMPTION: `free' is infinite
+				Just name -> Branch (map (loop (tail free) (dictAdd scope (patternElemRead name) (head free))) xs) -- ASSUMPTION: `free' is infinite
 
 ruleBeta :: String -> HPureSimplificationF
 ruleBeta = stdAnyRule func
@@ -296,10 +296,10 @@ numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $
 -----------
 
 trueLeaf :: HTree
-trueLeaf = Leaf (read "True")
+trueLeaf = Leaf (patternElemRead "True")
 
 falseLeaf :: HTree
-falseLeaf = Leaf (read "False")
+falseLeaf = Leaf (patternElemRead "False")
 
 funcRuleEqual :: Maybe Integer -> [HTree -> Maybe HTree] -> [HTree] -> Maybe HTree
 funcRuleEqual mlim simplifies args = case args of
@@ -370,7 +370,7 @@ stdNumberRule op name t = case t of
 	(Branch []) -> Nothing
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
 		differentOrNothing failcase $ withOp numToTree treeToMaybeNum op failcase rargs
-	where failcase = Leaf (read name)
+	where failcase = Leaf (patternElemRead name)
 
 stdAnyRule :: ([HTree -> Maybe HTree] -> [HTree] -> Maybe HTree) -> String -> HPureSimplificationF
 stdAnyRule func name = (name, wrap)
