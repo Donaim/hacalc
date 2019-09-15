@@ -14,7 +14,7 @@ infixl 0 |>
 
 readHFloat :: String -> Maybe Rational
 readHFloat "" = Nothing
-readHFloat s = readFloat s |> listToMaybe |> maybe Nothing (Just . ((*) sign) . fst)
+readHFloat s = readFloat positive |> listToMaybe |> maybe Nothing (Just . ((*) sign) . fst)
 	where
 	sign = if head s == '-' then -1 else 1
 	positive = if sign > 0 then s else tail s -- for some reason, readFloat does not work with negatives
