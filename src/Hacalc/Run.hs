@@ -10,6 +10,7 @@ import Hacalc.Parser
 import Hacalc.Types
 import Hacalc.Builtins
 import Hacalc.Util
+import Hacalc.UtilExternal
 
 -----------------------
 -- GENERAL INTERFACE --

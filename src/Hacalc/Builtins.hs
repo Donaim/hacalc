@@ -7,6 +7,7 @@ import Data.Ratio (numerator, denominator)
 import PatternT.All
 import Hacalc.Types
 import Hacalc.Util
+import Hacalc.UtilExternal
 
 ruleAdd :: String -> HPureSimplificationF
 ruleAdd = ruleAddLim Nothing
@@ -56,11 +57,11 @@ ruleEqualDynLim :: String -> HPureSimplificationF
 ruleEqualDynLim = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		(n : x : xs) -> case treeToMaybeNum n of
-			Just n -> case numMaybeInt n of
+		(n : x : xs) -> case n of
+			(Leaf (HLeafNum n)) -> case numMaybeInt n of
 				Just n -> funcRuleEqual (Just n) simplifyF (x : xs)
 				Nothing -> Nothing
-			Nothing -> Nothing
+			other -> Nothing
 		other -> Nothing
 
 ruleOr :: String -> HPureSimplificationF
@@ -75,18 +76,19 @@ ruleIsNum :: String -> HPureSimplificationF
 ruleIsNum = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case treeToMaybeNum x of
-			Just (NumberNaN {}) -> Just $ falseLeaf
-			Just n -> Just $ trueLeaf
-			Nothing -> Just $ falseLeaf
+		[x] -> case x of
+			(Leaf (HLeafNum x)) -> case x of
+				(NumberNaN {}) -> Just $ falseLeaf
+				other -> Just $ trueLeaf
+			other -> Just $ falseLeaf
 		(_) -> Nothing
 
 ruleIsNan :: String -> HPureSimplificationF
 ruleIsNan = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case treeToMaybeNum x of
-			Just (NumberNaN {}) -> Just $ trueLeaf
+		[x] -> case x of
+			(Leaf (HLeafNum (NumberNaN {}))) -> Just $ trueLeaf
 			other -> Just $ falseLeaf
 		(_) -> Nothing
 
@@ -94,48 +96,48 @@ ruleIsInt :: String -> HPureSimplificationF
 ruleIsInt = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case treeToMaybeNum x of
-			Just n -> Just $ case n of
+		[x] -> case x of
+			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
 				NumberFloat x -> if x == fromInteger (round x) then trueLeaf else falseLeaf
 				NumberFrac x -> if denominator x == 1 then trueLeaf else falseLeaf
-			Nothing -> Nothing
+			other -> Nothing
 		(_) -> Nothing
 
 ruleIsFrac :: String -> HPureSimplificationF
 ruleIsFrac = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case treeToMaybeNum x of
-			Just n -> Just $ case n of
+		[x] -> case x of
+			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
 				NumberFloat x -> falseLeaf
 				NumberFrac x -> if denominator x == 1 then falseLeaf else trueLeaf
-			Nothing -> Nothing
+			other -> Nothing
 		(_) -> Nothing
 
 ruleIsFloat :: String -> HPureSimplificationF
 ruleIsFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case treeToMaybeNum x of
-			Just n -> Just $ case n of
+		[x] -> case x of
+			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
 				NumberFloat x -> if x == fromInteger (round x) then falseLeaf else trueLeaf
 				NumberFrac x -> falseLeaf
-			Nothing -> Nothing
+			other -> Nothing
 		(_) -> Nothing
 
 ruleFloat :: String -> HPureSimplificationF
 ruleFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case treeToMaybeNum x of
-			Just n -> Just $ case n of
+		[x] -> case x of
+			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> x
 				NumberFloat n -> x
-				NumberFrac n -> numToTree (NumberFloat $ fromRational n)
-			Nothing -> Nothing
+				NumberFrac n -> Leaf $ HLeafNum (NumberFloat $ fromRational n)
+			other -> Nothing
 		(_) -> Nothing
 
 ruleLess :: String -> HPureSimplificationF
@@ -224,50 +226,14 @@ compareHacalc a b =
 	case a of
 		(Leaf as) -> case b of
 			(Leaf bs) ->
-				compareLeafs as bs
+				compare as bs
 			(Branch {}) ->
 				LT -- ASSUMPTION: no singleton branches
 		(Branch xs) -> case b of
 			(Leaf {}) ->
 				GT -- ASSUMPTION: no singleton branches
 			(Branch ys) ->
-				compareHacalcList (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
-
-compareNumbers :: Number -> Number -> Ordering
-compareNumbers a b = case a of
-	NumberFrac a -> case b of
-		NumberFrac b -> compare a b
-		NumberFloat b -> compare a (toRationalPrecise b)
-		NumberNaN {} -> LT
-	NumberFloat a -> case b of
-		NumberFrac b -> compare (toRationalPrecise a) b
-		NumberFloat b -> compare a b
-		NumberNaN {} -> EQ
-	NumberNaN {} -> case b of
-		NumberFrac {} -> GT
-		NumberFloat {} -> GT
-		NumberNaN {} -> EQ
-
-compareLeafs :: HLeafType -> HLeafType -> Ordering
-compareLeafs a b =
-	case leafElemToMaybeNum a of
-		Nothing -> case leafElemToMaybeNum b of
-			Nothing -> compare a b
-			Just bn -> GT
-		Just an -> case leafElemToMaybeNum b of
-			Nothing -> LT
-			Just bn -> compareNumbers an bn
-
-compareHacalcList :: [HTree] -> [HTree] -> Ordering
-compareHacalcList [] [] = EQ
-compareHacalcList xs [] = GT
-compareHacalcList [] ys = LT
-compareHacalcList (x : xs) (y : ys) =
-	let cmp = compareHacalc x y
-	in if cmp == EQ
-		then compareHacalcList xs ys
-		else cmp
-
+				compare (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
 
 ----------------
 -- OPERATIONS --
@@ -369,8 +335,14 @@ stdNumberRule op name t = case t of
 	Leaf x -> Nothing
 	(Branch []) -> Nothing
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
-		differentOrNothing failcase $ withOp numToTree treeToMaybeNum op failcase rargs
-	where failcase = Leaf (patternElemRead name)
+		differentOrNothing failcase $ withOp (Leaf . HLeafNum) treeToMaybeNum op failcase rargs
+	where
+	failcase = Leaf (patternElemRead name)
+	treeToMaybeNum t = case t of
+		Leaf l -> case l of
+			HVar {} -> Nothing
+			HLeafNum x -> Just x
+		Branch {} -> Nothing
 
 stdAnyRule :: ([HTree -> Maybe HTree] -> [HTree] -> Maybe HTree) -> String -> HPureSimplificationF
 stdAnyRule func name = (name, wrap)

@@ -8,7 +8,7 @@ import Data.Char
 
 import PatternT.All
 import Hacalc.Types
-import Hacalc.Util
+import Hacalc.UtilExternal
 
 partitionString :: String -> String -> (String, String, String)
 partitionString break s =

@@ -1,73 +1,11 @@
 
 module Hacalc.Util where
 
-import Data.Coerce (coerce)
 import Data.Char
 import Data.Maybe (isJust)
-import Text.Read (readMaybe)
-import Data.Ratio (denominator, numerator)
-import Numeric (showFFloat, readFloat)
 import PatternT.All
 import Hacalc.Types
-
-fst3 :: (a, b, c) -> a
-fst3 (a, b, c) = a
-
-padLeft :: Char -> Int -> String -> String
-padLeft c n s = s ++ (replicate toappend c)
-	where
-	toappend = max (n - (length s)) 0
-
-isWhiteSpace :: String -> Bool
-isWhiteSpace str = all isSpace str
-
-(|>) :: a -> (a -> b) -> b
-(|>) x f = f x
-infixl 0 |>
-
-toRationalPrecise :: Double -> Rational
-toRationalPrecise x = positive |> readFloat |> head |> fst |> (*) sign
-	where
-	sign = if x < 0 then -1 else 1
-	positive = if x < 0 then tail (show x) else (show x) -- for some reason, readFloat does not work with negatives
-
--- | Strip all trailing zeroes
-showNoZeroes :: (RealFloat a) => a -> String
-showNoZeroes x = if anydotq then striped else s
-	where
-		s = showFullPrecision x
-		r = reverse s
-		anydotq = any (== '.') s
-		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
-
-showFullPrecision :: (RealFloat a) => a -> String
-showFullPrecision x = showFFloat Nothing x ""
-
-numToTree :: Number -> HTree
-numToTree x = case x of
-	NumberNaN -> Leaf (patternElemRead "NaN")
-	NumberFloat x -> Leaf (patternElemRead (showNoZeroes x))
-	NumberFrac x ->
-		if denominator x == 1
-		then Leaf (patternElemRead $ show $ numerator x)
-		else Leaf (patternElemRead $ show x)
-
-leafElemToMaybeNum :: HLeafType -> Maybe Number
-leafElemToMaybeNum orig = onstring (patternElemShow orig)
-	where
-	onstring s =
-		if s == "NaN" || s == "Infinity"
-		then Just NumberNaN
-		else case readMaybe s :: Maybe Rational of
-			Just x -> Just (NumberFrac x)
-			Nothing -> case readMaybe s :: Maybe Double of
-				Just x -> Just (NumberFloat x)
-				Nothing -> Nothing
-
-treeToMaybeNum :: HTree -> Maybe Number
-treeToMaybeNum t = case t of
-	(Leaf s) -> leafElemToMaybeNum s
-	(Branch {}) -> Nothing
+import Hacalc.UtilExternal
 
 historyLimitTreeSize :: Int -> [(HTree, b, c)] -> ([(HTree, b, c)], [(HTree, b, c)])
 historyLimitTreeSize limit hist = span (isJust . treeSizeLim limit . fst3) hist
@@ -90,13 +28,3 @@ showHistory = map f
 
 stackBuiltinRules :: (Monad m) => [HPureSimplificationF] -> Rulesets -> [[HSimplificationF m ctx]]
 stackBuiltinRules pures patterns = map (\ ps -> map Right3 pures ++ map Left3 ps) patterns
-
-newtype IdentityMonad a = IdentityMonad { unliftIdentityMonad :: a }
-
-instance Functor IdentityMonad where
-	fmap     = coerce
-instance Applicative IdentityMonad where
-	pure     = IdentityMonad
-	(<*>)    = coerce
-instance Monad IdentityMonad where
-	m >>= k  = k (unliftIdentityMonad m)

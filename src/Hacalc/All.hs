@@ -5,6 +5,7 @@ module Hacalc.All
 	, module Hacalc.Run
 	, module Hacalc.Types
 	, module Hacalc.Util
+	, module Hacalc.UtilExternal
 	) where
 
 import Hacalc.Builtins
@@ -12,3 +13,4 @@ import Hacalc.Parser
 import Hacalc.Run
 import Hacalc.Types
 import Hacalc.Util
+import Hacalc.UtilExternal
