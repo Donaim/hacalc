@@ -69,17 +69,17 @@ readOneRuleset lines = do
 	okRules     = snd partitioned
 	badRules    = fst partitioned
 
-concatByNumbers :: HTree -> HTree
+concatByNumbers :: (PatternElement a) => Tree a -> Tree a
 concatByNumbers t = case t of
 	Branch [Leaf x, Leaf maybeMult, Leaf y] ->
-		if patternElemShow maybeMult == "*" && isDecimal x && not (isDecimal y)
-		then Leaf $ HVar $ patternElemShow x ++ patternElemShow y
+		if patternElemShow maybeMult == "*" && isDecimal (patternElemShow x) && not (isDecimal (patternElemShow y))
+		then Leaf $ patternElemRead $ patternElemShow x ++ patternElemShow y
 		else t
 	Branch xs -> Branch (map concatByNumbers xs)
 	other -> t
 
-isDecimal :: HLeafType -> Bool
-isDecimal orig = let x = patternElemShow orig in if null x then False else loop True x
+isDecimal :: String -> Bool
+isDecimal x = if null x then False else loop True x
 	where
 	loop expectedDot s = case s of
 		[] -> True

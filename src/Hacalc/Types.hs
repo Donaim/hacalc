@@ -6,9 +6,9 @@ import PatternT.Util
 import Hacalc.UtilExternal
 import Data.Ratio (denominator, numerator)
 
-type History ctx = [(HTree, Either HSimplifyPattern String, ctx)]
-type Stdout ctx = (String, History ctx, History ctx)
-type Rulesets = [[HSimplifyPattern]]
+type History a ctx = [(Tree a, Either (SimplifyPattern a) String, ctx)]
+type Stdout a ctx = (String, History a ctx, History a ctx)
+type Rulesets a = [[SimplifyPattern a]]
 
 data HLeafType
 	= HVar String
