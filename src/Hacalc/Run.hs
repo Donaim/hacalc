@@ -128,7 +128,6 @@ hacalcPureRules =
 	, ruleIsNan      "$nan?"
 	, ruleIsInt      "$int?"
 	, ruleIsFrac     "$fraction?"
-	, ruleIsFloat    "$float?"
 	, ruleFloat      "$float"
 	, ruleLess       "$lt?"
 	, ruleLessOrEq   "$le?"

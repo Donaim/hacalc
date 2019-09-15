@@ -13,7 +13,6 @@ type Rulesets = [[HSimplifyPattern]]
 data Number
 	= NumberNaN
 	| NumberFrac Rational
-	| NumberFloat Double
 	deriving (Show, Read)
 
 data HLeafType
@@ -26,7 +25,6 @@ instance PatternElement HLeafType where
 		HVar s -> s
 		HLeafNum x -> case x of
 			NumberNaN -> "NaN"
-			NumberFloat x -> showNoZeroes x
 			NumberFrac x ->
 				if denominator x == 1
 				then show $ numerator x
@@ -38,7 +36,7 @@ instance PatternElement HLeafType where
 		else case readHFrac s of
 			Just x -> HLeafNum $ NumberFrac x
 			Nothing -> case readHFloat s of
-				Just x -> HLeafNum $ NumberFloat x
+				Just x -> HLeafNum $ NumberFrac x
 				Nothing -> HVar s
 
 instance Eq Number where
@@ -46,26 +44,17 @@ instance Eq Number where
 		NumberFrac x -> case b of
 			NumberFrac y -> x == y
 			NumberNaN {} -> False
-			NumberFloat y -> x == toRationalPrecise y -- TODO: maybe casting rational to float is better?
-		NumberNaN {} -> True
-		NumberFloat x -> case b of
-			NumberFloat y -> x == y
-			NumberNaN {} -> False
-			NumberFrac y -> toRationalPrecise x == y
+		NumberNaN {} -> case b of
+			NumberFrac {} -> False
+			NumberNaN {} -> True
 
 instance Ord Number where
 	compare a b = case a of
 		NumberFrac a -> case b of
 			NumberFrac b -> compare a b
-			NumberFloat b -> compare a (toRationalPrecise b)
 			NumberNaN {} -> LT
-		NumberFloat a -> case b of
-			NumberFrac b -> compare (toRationalPrecise a) b
-			NumberFloat b -> compare a b
-			NumberNaN {} -> EQ
 		NumberNaN {} -> case b of
 			NumberFrac {} -> GT
-			NumberFloat {} -> GT
 			NumberNaN {} -> EQ
 
 instance Ord HLeafType where

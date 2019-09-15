@@ -3,7 +3,7 @@ module Hacalc.UtilExternal where
 
 import Data.Char
 import Data.Coerce (coerce)
-import Data.Maybe (isJust)
+import Data.Maybe
 import Text.Read (readMaybe)
 import Data.Ratio (denominator, numerator)
 import Numeric (showFFloat, readFloat)
@@ -12,8 +12,12 @@ import Numeric (showFFloat, readFloat)
 (|>) x f = f x
 infixl 0 |>
 
-readHFloat :: String -> Maybe Double
-readHFloat = readMaybe
+readHFloat :: String -> Maybe Rational
+readHFloat "" = Nothing
+readHFloat s = readFloat s |> listToMaybe |> maybe Nothing (Just . ((*) sign) . fst)
+	where
+	sign = if head s == '-' then -1 else 1
+	positive = if sign > 0 then s else tail s -- for some reason, readFloat does not work with negatives
 
 readHFrac :: String -> Maybe Rational
 readHFrac = readMaybe

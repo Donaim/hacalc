@@ -99,7 +99,6 @@ ruleIsInt = stdAnyRule func
 		[x] -> case x of
 			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
-				NumberFloat x -> if x == fromInteger (round x) then trueLeaf else falseLeaf
 				NumberFrac x -> if denominator x == 1 then trueLeaf else falseLeaf
 			other -> Nothing
 		(_) -> Nothing
@@ -111,20 +110,7 @@ ruleIsFrac = stdAnyRule func
 		[x] -> case x of
 			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
-				NumberFloat x -> falseLeaf
-				NumberFrac x -> if denominator x == 1 then falseLeaf else trueLeaf
-			other -> Nothing
-		(_) -> Nothing
-
-ruleIsFloat :: String -> HPureSimplificationF
-ruleIsFloat = stdAnyRule func
-	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			Leaf (HLeafNum n) -> Just $ case n of
-				NumberNaN {} -> falseLeaf
-				NumberFloat x -> if x == fromInteger (round x) then falseLeaf else trueLeaf
-				NumberFrac x -> falseLeaf
+				NumberFrac x -> if denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -135,8 +121,7 @@ ruleFloat = stdAnyRule func
 		[x] -> case x of
 			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> x
-				NumberFloat n -> x
-				NumberFrac n -> Leaf $ HLeafNum (NumberFloat $ fromRational n)
+				NumberFrac n -> Leaf $ HVar (show (fromRational n :: Double))
 			other -> Nothing
 		(_) -> Nothing
 
@@ -252,7 +237,7 @@ numberDiv :: Number -> Number -> Number
 numberDiv = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $ a / b)
 
 numberPow :: Number -> Number -> Number
-numberPow = numberDefaultOp (\ a b -> NumberFloat (fromRational a ** fromRational b))
+numberPow = numberDefaultOp (\ a b -> NumberFrac $ toRational (fromRational a ** fromRational b))
 
 numberMod :: Number -> Number -> Number
 numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $ mod' a b)
@@ -295,7 +280,6 @@ numMaybeInt :: Number -> Maybe Integer
 numMaybeInt n = case n of
 	NumberNaN {} -> Nothing
 	NumberFrac x -> if denominator x == 1 then Just (numerator x) else Nothing
-	NumberFloat x -> if x == fromInteger (round x) then Just (round x) else Nothing
 
 withChecker :: Maybe (Integer, Integer) -> (Number -> Number -> Number) -> (Number -> Number -> Number)
 withChecker mbounds f = case mbounds of
@@ -311,7 +295,6 @@ checkBound2 a b imaxa dmaxa imaxb dmaxb = checkBound a imaxa dmaxa && checkBound
 checkBound :: Number -> Integer -> Double -> Bool
 checkBound x imax dmax = case x of
 	NumberFrac x -> (abs (numerator x) < imax) && (denominator x < imax)
-	NumberFloat x -> abs x < dmax -- NOTE: checkBound Infinity _ _ == False
 	NumberNaN {} -> True
 
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> Number -> Number -> Number
@@ -324,11 +307,6 @@ numberDefaultOp op a b =
 		NumberFrac a -> case b of
 			NumberNaN {} -> NumberNaN
 			NumberFrac b -> op a b
-			NumberFloat b -> op a (toRationalPrecise b)
-		NumberFloat a -> case b of
-			NumberNaN {} -> NumberNaN
-			NumberFrac b -> op (toRationalPrecise a) b
-			NumberFloat b -> op (toRationalPrecise a) (toRationalPrecise b)
 
 stdNumberRule :: (Number -> Number -> Number) -> String -> HTree -> Maybe HTree
 stdNumberRule op name t = case t of
