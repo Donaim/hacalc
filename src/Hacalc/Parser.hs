@@ -38,26 +38,26 @@ splitRulesets lines = loop [] [] lines
 		then loop ((reverse cur) : buf) [] xs
 		else loop buf (x : cur) xs
 
-readPatterns :: String -> Either [ParseMatchError] [[HSimplifyPattern]]
+readPatterns :: (PatternElement a) => String -> Either [ParseMatchError] [[SimplifyPattern a]]
 readPatterns = readPatternsL . splitLines
 
-readPatternsL :: [String] -> Either [ParseMatchError] [[HSimplifyPattern]]
+readPatternsL :: (PatternElement a) => [String] -> Either [ParseMatchError] [[SimplifyPattern a]]
 readPatternsL allLines = do
 	unless (null badReads) (Left badReads)
 	return (snd partitioned)
 	where
 	rulesets = splitRulesets allLines
 
-	reads :: [Either [ParseMatchError] [HSimplifyPattern]]
+	-- reads :: (PatternElement a) => [Either [ParseMatchError] [SimplifyPattern a]]
 	reads = map readOneRuleset rulesets
 
-	partitioned :: ([[ParseMatchError]], [[HSimplifyPattern]])
+	-- partitioned :: (PatternElement a) => ([[ParseMatchError]], [[SimplifyPattern a]])
 	partitioned = partitionEithers reads
 
-	badReads :: [ParseMatchError]
+	-- badReads :: [ParseMatchError]
 	badReads = concat $ fst partitioned
 
-readOneRuleset :: [String] -> Either [ParseMatchError] [HSimplifyPattern]
+readOneRuleset :: (PatternElement a) => [String] -> Either [ParseMatchError] [SimplifyPattern a]
 readOneRuleset lines = do
 	unless (null badRules) (Left badRules)
 	return okRules
