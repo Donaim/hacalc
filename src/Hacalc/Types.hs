@@ -12,7 +12,7 @@ type Rulesets = [[HSimplifyPattern]]
 
 data Number
 	= NumberNaN
-	| NumberFrac Rational
+	| NumberFrac Rational Bool -- ^ Bool True: be showed as fraction, False: showed as floating
 	deriving (Show, Read)
 
 data HLeafType
@@ -25,7 +25,7 @@ instance PatternElement HLeafType where
 		HVar s -> s
 		HLeafNum x -> case x of
 			NumberNaN -> "NaN"
-			NumberFrac x ->
+			NumberFrac x sf ->
 				if denominator x == 1
 				then show $ numerator x
 				else show x
@@ -34,15 +34,15 @@ instance PatternElement HLeafType where
 		if s == "NaN" || s == "Infinity"
 		then HLeafNum $ NumberNaN
 		else case readHFrac s of
-			Just x -> HLeafNum $ NumberFrac x
+			Just x -> HLeafNum $ NumberFrac x True
 			Nothing -> case readHFloat s of
-				Just x -> HLeafNum $ NumberFrac x
+				Just x -> HLeafNum $ NumberFrac x False
 				Nothing -> HVar s
 
 instance Eq Number where
 	a == b = case a of
-		NumberFrac x -> case b of
-			NumberFrac y -> x == y
+		NumberFrac x sf -> case b of
+			NumberFrac y sf -> x == y
 			NumberNaN {} -> False
 		NumberNaN {} -> case b of
 			NumberFrac {} -> False
@@ -50,8 +50,8 @@ instance Eq Number where
 
 instance Ord Number where
 	compare a b = case a of
-		NumberFrac a -> case b of
-			NumberFrac b -> compare a b
+		NumberFrac a sf -> case b of
+			NumberFrac b sf -> compare a b
 			NumberNaN {} -> LT
 		NumberNaN {} -> case b of
 			NumberFrac {} -> GT

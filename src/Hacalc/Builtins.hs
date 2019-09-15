@@ -99,7 +99,7 @@ ruleIsInt = stdAnyRule func
 		[x] -> case x of
 			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
-				NumberFrac x -> if denominator x == 1 then trueLeaf else falseLeaf
+				NumberFrac x sf -> if denominator x == 1 then trueLeaf else falseLeaf
 			other -> Nothing
 		(_) -> Nothing
 
@@ -110,7 +110,7 @@ ruleIsFrac = stdAnyRule func
 		[x] -> case x of
 			Leaf (HLeafNum n) -> Just $ case n of
 				NumberNaN {} -> falseLeaf
-				NumberFrac x -> if denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+				NumberFrac x sf -> if sf == False || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -120,8 +120,8 @@ ruleFloat = stdAnyRule func
 	func simplifyF args = case args of
 		[x] -> case x of
 			Leaf (HLeafNum n) -> Just $ case n of
-				NumberNaN {} -> x
-				NumberFrac n -> Leaf $ HVar (show (fromRational n :: Double))
+				NumberFrac n True -> Leaf $ HLeafNum $ NumberFrac n False
+				other -> x
 			other -> Nothing
 		(_) -> Nothing
 
@@ -234,13 +234,13 @@ numberMul :: Number -> Number -> Number
 numberMul = numberDefaultOpTotal (*)
 
 numberDiv :: Number -> Number -> Number
-numberDiv = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $ a / b)
+numberDiv = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) True)
 
 numberPow :: Number -> Number -> Number
-numberPow = numberDefaultOp (\ a b -> NumberFrac $ toRational (fromRational a ** fromRational b))
+numberPow = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) False)
 
 numberMod :: Number -> Number -> Number
-numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac $ mod' a b)
+numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) True)
 
 -----------
 -- UTILS --
@@ -279,34 +279,31 @@ applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
 numMaybeInt :: Number -> Maybe Integer
 numMaybeInt n = case n of
 	NumberNaN {} -> Nothing
-	NumberFrac x -> if denominator x == 1 then Just (numerator x) else Nothing
+	NumberFrac x sf -> if denominator x == 1 then Just (numerator x) else Nothing
 
 withChecker :: Maybe (Integer, Integer) -> (Number -> Number -> Number) -> (Number -> Number -> Number)
 withChecker mbounds f = case mbounds of
 	Nothing -> f
-	Just (ma, mb) -> \ a b -> if checkBound2 a b ma dmaxa mb dmaxb then f a b else NumberNaN
-		where
-		dmaxa = fromIntegral ma -- ASSUMPTION: fromIntegral (2 ^ 99999) == Infinity, not a GHC error
-		dmaxb = fromIntegral mb
+	Just (ma, mb) -> \ a b -> if checkBound2 a b ma mb then f a b else NumberNaN
 
-checkBound2 :: Number -> Number -> Integer -> Double -> Integer -> Double -> Bool
-checkBound2 a b imaxa dmaxa imaxb dmaxb = checkBound a imaxa dmaxa && checkBound b imaxb dmaxb
+checkBound2 :: Number -> Number -> Integer -> Integer -> Bool
+checkBound2 a b imaxa imaxb = checkBound a imaxa && checkBound b imaxb
 
-checkBound :: Number -> Integer -> Double -> Bool
-checkBound x imax dmax = case x of
-	NumberFrac x -> (abs (numerator x) < imax) && (denominator x < imax)
+checkBound :: Number -> Integer -> Bool
+checkBound x imax = case x of
+	NumberFrac x sf -> (abs (numerator x) < imax) && (denominator x < imax)
 	NumberNaN {} -> True
 
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> Number -> Number -> Number
-numberDefaultOpTotal f = numberDefaultOp (\ a b -> NumberFrac $ f a b)
+numberDefaultOpTotal f = numberDefaultOp (\ a b -> NumberFrac (f a b) True)
 
 numberDefaultOp :: (Rational -> Rational -> Number) -> Number -> Number -> Number
 numberDefaultOp op a b =
 	case a of
 		NumberNaN {} -> NumberNaN
-		NumberFrac a -> case b of
+		NumberFrac a sf -> case b of
 			NumberNaN {} -> NumberNaN
-			NumberFrac b -> op a b
+			NumberFrac b sf -> op a b
 
 stdNumberRule :: (Number -> Number -> Number) -> String -> HTree -> Maybe HTree
 stdNumberRule op name t = case t of
