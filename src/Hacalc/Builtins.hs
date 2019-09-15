@@ -58,7 +58,7 @@ ruleEqualDynLim = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		(n : x : xs) -> case n of
-			(Leaf (HLeafNum n)) -> case numMaybeInt n of
+			(Leaf n) -> case numMaybeInt n of
 				Just n -> funcRuleEqual (Just n) simplifyF (x : xs)
 				Nothing -> Nothing
 			other -> Nothing
@@ -77,10 +77,11 @@ ruleIsNum = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			(Leaf (HLeafNum x)) -> case x of
+			(Leaf x) -> case x of
 				(NumberNaN {}) -> Just $ falseLeaf
-				other -> Just $ trueLeaf
-			other -> Just $ falseLeaf
+				(NumberFrac {}) -> Just $ trueLeaf
+				other -> Nothing
+			other -> Nothing
 		(_) -> Nothing
 
 ruleIsNan :: String -> HPureSimplificationF
@@ -88,7 +89,7 @@ ruleIsNan = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			(Leaf (HLeafNum (NumberNaN {}))) -> Just $ trueLeaf
+			(Leaf (NumberNaN {})) -> Just $ trueLeaf
 			other -> Just $ falseLeaf
 		(_) -> Nothing
 
@@ -97,9 +98,7 @@ ruleIsInt = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (HLeafNum n) -> Just $ case n of
-				NumberNaN {} -> falseLeaf
-				NumberFrac x sf -> if denominator x == 1 then trueLeaf else falseLeaf
+			Leaf (NumberFrac x sf) -> Just $ if denominator x == 1 then trueLeaf else falseLeaf
 			other -> Nothing
 		(_) -> Nothing
 
@@ -108,9 +107,7 @@ ruleIsFrac = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (HLeafNum n) -> Just $ case n of
-				NumberNaN {} -> falseLeaf
-				NumberFrac x sf -> if sf == False || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			Leaf (NumberFrac x sf) -> Just $ if sf == False || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -119,9 +116,7 @@ ruleIsFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (HLeafNum n) -> Just $ case n of
-				NumberNaN {} -> falseLeaf
-				NumberFrac x sf -> if sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			Leaf (NumberFrac x sf) -> Just $ if sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -130,9 +125,7 @@ ruleFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (HLeafNum n) -> Just $ case n of
-				NumberFrac n True -> Leaf $ HLeafNum $ NumberFrac n False
-				other -> x
+			Leaf (NumberFrac n sf) -> Just $ if sf then Leaf $ NumberFrac n False else x
 			other -> Nothing
 		(_) -> Nothing
 
@@ -235,22 +228,22 @@ compareHacalc a b =
 -- OPERATIONS --
 ----------------
 
-numberAdd :: Number -> Number -> Number
+numberAdd :: HLeafType -> HLeafType -> HLeafType
 numberAdd = numberDefaultOpTotal (+)
 
-numberSub :: Number -> Number -> Number
+numberSub :: HLeafType -> HLeafType -> HLeafType
 numberSub = numberDefaultOpTotal (-)
 
-numberMul :: Number -> Number -> Number
+numberMul :: HLeafType -> HLeafType -> HLeafType
 numberMul = numberDefaultOpTotal (*)
 
-numberDiv :: Number -> Number -> Number
+numberDiv :: HLeafType -> HLeafType -> HLeafType
 numberDiv = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) True)
 
-numberPow :: Number -> Number -> Number
+numberPow :: HLeafType -> HLeafType -> HLeafType
 numberPow = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) False)
 
-numberMod :: Number -> Number -> Number
+numberMod :: HLeafType -> HLeafType -> HLeafType
 numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) True)
 
 -----------
@@ -258,10 +251,10 @@ numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (
 -----------
 
 trueLeaf :: HTree
-trueLeaf = Leaf (patternElemRead "True")
+trueLeaf = Leaf (HVar "True")
 
 falseLeaf :: HTree
-falseLeaf = Leaf (patternElemRead "False")
+falseLeaf = Leaf (HVar "False")
 
 funcRuleEqual :: Maybe Integer -> [HTree -> Maybe HTree] -> [HTree] -> Maybe HTree
 funcRuleEqual mlim simplifies args = case args of
@@ -287,47 +280,50 @@ applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
 			Nothing -> t
 			Just newt -> loop (n + 1) newt
 
-numMaybeInt :: Number -> Maybe Integer
+numMaybeInt :: HLeafType -> Maybe Integer
 numMaybeInt n = case n of
-	NumberNaN {} -> Nothing
 	NumberFrac x sf -> if denominator x == 1 then Just (numerator x) else Nothing
+	other -> Nothing
 
-withChecker :: Maybe (Integer, Integer) -> (Number -> Number -> Number) -> (Number -> Number -> Number)
+withChecker :: Maybe (Integer, Integer) -> (HLeafType -> HLeafType -> HLeafType) -> (HLeafType -> HLeafType -> HLeafType)
 withChecker mbounds f = case mbounds of
 	Nothing -> f
 	Just (ma, mb) -> \ a b -> if checkBound2 a b ma mb then f a b else NumberNaN
 
-checkBound2 :: Number -> Number -> Integer -> Integer -> Bool
+checkBound2 :: HLeafType -> HLeafType -> Integer -> Integer -> Bool
 checkBound2 a b imaxa imaxb = checkBound a imaxa && checkBound b imaxb
 
-checkBound :: Number -> Integer -> Bool
+checkBound :: HLeafType -> Integer -> Bool
 checkBound x imax = case x of
 	NumberFrac x sf -> (abs (numerator x) < imax) && (denominator x < imax)
 	NumberNaN {} -> True
+	HVar {} -> True
 
-numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> Number -> Number -> Number
+numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
 numberDefaultOpTotal f = numberDefaultOp (\ a b -> NumberFrac (f a b) True)
 
-numberDefaultOp :: (Rational -> Rational -> Number) -> Number -> Number -> Number
+numberDefaultOp :: (Rational -> Rational -> HLeafType) -> HLeafType -> HLeafType -> HLeafType
 numberDefaultOp op a b =
 	case a of
 		NumberNaN {} -> NumberNaN
+		HVar {} -> NumberNaN -- FIXME: something more clever
 		NumberFrac a sf -> case b of
 			NumberNaN {} -> NumberNaN
+			HVar {} -> NumberNaN -- FIXME: something more clever
 			NumberFrac b sf -> op a b
 
-stdNumberRule :: (Number -> Number -> Number) -> String -> HTree -> Maybe HTree
+stdNumberRule :: (HLeafType -> HLeafType -> HLeafType) -> String -> HTree -> Maybe HTree
 stdNumberRule op name t = case t of
 	Leaf x -> Nothing
 	(Branch []) -> Nothing
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
-		differentOrNothing failcase $ withOp (Leaf . HLeafNum) treeToMaybeNum op failcase rargs
+		differentOrNothing failcase $ withOp Leaf treeToMaybeNum op failcase rargs
 	where
 	failcase = Leaf (patternElemRead name)
 	treeToMaybeNum t = case t of
 		Leaf l -> case l of
 			HVar {} -> Nothing
-			HLeafNum x -> Just x
+			other -> Just l
 		Branch {} -> Nothing
 
 stdAnyRule :: ([HTree -> Maybe HTree] -> [HTree] -> Maybe HTree) -> String -> HPureSimplificationF
@@ -362,7 +358,7 @@ withOp to from op failcase rargs = case withOpOnMaybeNums to op failcase numcast
 withOpOnMaybeNums :: (a -> HTree) -> (a -> a -> a) -> HTree -> [Either HTree a] -> [HTree]
 withOpOnMaybeNums to op failcase mnums = loop Nothing mnums
 	where
-	-- loop :: Maybe Number -> [Either HTree Number] -> [HTree]
+	-- loop :: Maybe HLeafType -> [Either HTree HLeafType] -> [HTree]
 	loop macc [] = case macc of
 		Nothing -> []
 		Just acc -> [to acc]
