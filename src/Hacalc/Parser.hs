@@ -73,7 +73,7 @@ concatByNumbers :: HTree -> HTree
 concatByNumbers t = case t of
 	Branch [Leaf x, Leaf maybeMult, Leaf y] ->
 		if patternElemShow maybeMult == "*" && isDecimal x && not (isDecimal y)
-		then Leaf (patternElemRead $ patternElemShow x ++ patternElemShow y)
+		then Leaf $ HVar $ patternElemShow x ++ patternElemShow y
 		else t
 	Branch xs -> Branch (map concatByNumbers xs)
 	other -> t
