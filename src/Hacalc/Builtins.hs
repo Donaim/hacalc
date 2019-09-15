@@ -114,6 +114,17 @@ ruleIsFrac = stdAnyRule func
 			other -> Nothing
 		(_) -> Nothing
 
+ruleIsFloat :: String -> HPureSimplificationF
+ruleIsFloat = stdAnyRule func
+	where
+	func simplifyF args = case args of
+		[x] -> case x of
+			Leaf (HLeafNum n) -> Just $ case n of
+				NumberNaN {} -> falseLeaf
+				NumberFrac x sf -> if sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			other -> Nothing
+		(_) -> Nothing
+
 ruleFloat :: String -> HPureSimplificationF
 ruleFloat = stdAnyRule func
 	where
