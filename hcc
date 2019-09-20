@@ -1,0 +1,24 @@
+#!/bin/bash
+
+USAGE="Usage: $0 rulefile expr expr expr ..."
+if [ "$#" == 0 ]
+then
+	echo "$USAGE"
+	exit 1
+fi
+
+rulesfile="$1"
+
+shift
+
+executable=""
+if hash hacalc 2>/dev/null
+then executable='hacalc'
+else executable='stack run --'
+fi
+
+if [ "$#" == 0 ]
+then $executable "$rulesfile"
+else echo "$@" | $executable "$rulesfile"
+fi
+
