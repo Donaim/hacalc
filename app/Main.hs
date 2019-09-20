@@ -7,16 +7,15 @@ import Control.Monad
 import System.Console.CmdArgs
 import Data.Data
 import System.IO
+import System.Exit
 
 import PatternT.All
-import Hacalc.Types
-import Hacalc.Run
-import Hacalc.Util
+import Hacalc.All
 
 data ArgsT
 	= Load
 	{ rulefile :: String
-	, exprfile :: String
+	, exprfile :: Maybe String
 	, original :: Bool
 	, limit    :: Maybe Int
 	}
@@ -25,7 +24,7 @@ data ArgsT
 load :: ArgsT
 load = Load
 	{ rulefile = def &= argPos 0 &= typ "rulefile"
-	, exprfile = def &= argPos 1 &= typ "exprfile"
+	, exprfile = def &= typ "exprfile"
 	, original = def &= help "Display the original expression in output. Looks like 'expr -> reduced'"
 	, limit    = def &= help "Limit the number of evaluations"
 	}
@@ -49,20 +48,31 @@ runOptions = InterpretOptions
 	, interpretCondRecursionLimit        = Just 8
 	}
 
-withText :: Maybe Int -> Bool -> String -> String -> IO ()
-withText mlimit originalQ ruleText exprText =
-	case interpretRulesAndText runOptions ruleText () exprText of
-		Left e -> putStrLn $ "Rules have syntax errors: " ++ show e
-		Right results -> mapM_ mapf results
+eachLine :: (String -> String) -> (String -> String)
+eachLine f = unlines . map f . lines
 
+interpretPureLine :: Rulesets HLeafType -> String -> String
+interpretPureLine rules line = unliftIdentityMonad $
+	case interpretLine runOptions rules () line of
+		Left e -> return $ "Error: " ++ show e
+		Right r -> do
+			(answer, taken, droped) <- r
+			return $ answer
+
+getRules :: String -> IO (Rulesets HLeafType)
+getRules text = case readPatterns text of
+	Left e -> do
+		die $ "Bad rules: " ++ show e
+	Right p -> do
+		return p
+
+interactFunc :: Rulesets HLeafType -> Bool -> String -> String
+interactFunc rules originalQ text = concatMap (++ "\n") output
 	where
-	mapf (line, result) = case result of
-		Left errors -> putErrLn $ line ++ " -> ERROR: " ++ show errors
-		Right ok -> do
-			(showed, r, droped) <- ok
-			let answer = if originalQ then line ++ " -> " ++ showed else showed
-			putStrLn $ answer
-
+	filtered = filter (not . null) $ lines text
+	answers = map (interpretPureLine rules) filtered
+	output = map tf (zip answers filtered)
+	tf (answer, original) = if originalQ then original ++ " -> " ++ answer else answer
 
 main :: IO ()
 main = do
@@ -71,6 +81,11 @@ main = do
 		&= program "hacalc"
 
 	ruleText <- readFile (rulefile args)
-	exprText <- readFile (exprfile args)
-	withText (limit args) (original args) ruleText exprText
+	rules <- getRules ruleText
+	case exprfile args of
+		Just exprfile -> do
+			exprText <- readFile exprfile
+			putStr $ interactFunc rules (original args) exprText
+		Nothing -> do
+			interact (interactFunc rules (original args))
 

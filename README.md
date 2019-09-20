@@ -53,6 +53,6 @@ show (fac (succ (succ (succ (succ 0
 This program can be used as a standalone compiler, but there is also a [hacalc-ide](https://github.com/Donaim/hacalc-ide) that is much nicer to use
 
 Instructions for standalone compiler:
-1) Write patterns to `some/file`
-2) Write expressions to `other/file`
-3) `$ stack run -- some/file other/file`
+1) Write rules to `rules/file`
+2) `$ stack run -- rules/file`
+3) Input expressions
