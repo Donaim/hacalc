@@ -20,10 +20,12 @@ instance PatternElement HLeafType where
 	patternElemShow x = case x of
 		HVar s -> s
 		NumberNaN -> "NaN"
-		NumberFrac x sf ->
+		NumberFrac x True ->
 			if denominator x == 1
 			then show $ numerator x
 			else show x
+		NumberFrac x False ->
+			showNoZeroes $ fromRational x
 
 	patternElemRead s =
 		if s == "NaN" || s == "Infinity"
