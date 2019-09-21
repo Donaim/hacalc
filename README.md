@@ -50,9 +50,6 @@ show (fac (succ (succ (succ (succ 0
 
 # HOWTO
 
-Simpliest:  
-`$ ./hcc ~/rules/file`  
-
 This program can be used as a standalone compiler, but there is also a [hacalc-ide](https://github.com/Donaim/hacalc-ide) that is much nicer to use
 
 Instructions for standalone compiler:
