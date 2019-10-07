@@ -16,6 +16,11 @@ data HLeafType
 	| NumberFrac Rational Bool -- ^ Bool True: be showed as fraction, False: showed as floating
 	deriving (Show, Read)
 
+data NumberRepType
+	= NumberRepFraction
+	| NumberRepFloat Integer -- Integer stands for base
+	deriving (Eq, Show, Read)
+
 instance PatternElement HLeafType where
 	patternElemShow x = case x of
 		HVar s -> s
@@ -30,11 +35,9 @@ instance PatternElement HLeafType where
 	patternElemRead s =
 		if s == "NaN" || s == "Infinity"
 		then NumberNaN
-		else case readHFrac s of
-			Just x -> NumberFrac x True
-			Nothing -> case readHFloat s of
-				Just x -> NumberFrac x False
-				Nothing -> HVar s
+		else case readHFloat s of
+			Just (r, b) -> NumberFrac r True
+			Nothing -> HVar s
 
 instance Eq HLeafType where
 	a == b = case a of

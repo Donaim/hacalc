@@ -5,19 +5,128 @@ import Data.Char
 import Data.Coerce (coerce)
 import Data.Maybe
 import Text.Read (readMaybe)
-import Data.Ratio (denominator, numerator)
+import Data.Ratio (denominator, numerator, (%))
+import GHC.Real (Ratio(..))
 import Numeric (showFFloat, readFloat)
 
 (|>) :: a -> (a -> b) -> b
 (|>) x f = f x
 infixl 0 |>
 
-readHFloat :: String -> Maybe Rational
+readHFloat :: String -> Maybe (Rational, Integer)
 readHFloat "" = Nothing
-readHFloat s = readFloat positive |> singleToToMaybe |> maybe Nothing (Just . ((*) sign))
+readHFloat s = case posParse False 10 [] [] positive of
+	Nothing -> Nothing
+	Just (base, before, after) ->
+		if any (>= base) before || any (>= base) after
+		then Nothing
+		else toRat base before after |> flip (,) base |> Just
 	where
-	singleToToMaybe [(x, "")] = Just x
-	singleToToMaybe xs = Nothing
+	toRat base before after = ((sign * integralPart) :% 1) + (numer :% denom)
+		where
+		integralPart = parseIntegralPart base 1 before
+		(numer, denom) = parseDecimalPart base 0 base after
+
+	parseDecimalPart :: Integer -> Integer -> Integer -> [Integer] -> (Integer, Integer)
+	parseDecimalPart base top down digits = case digits of
+		[] -> (top, down)
+		(x : xs) -> parseDecimalPart base (top + x * down) (base * down) xs
+
+	parseIntegralPart :: Integer -> Integer -> [Integer] -> Integer
+	parseIntegralPart base pow digits = case digits of
+		[] -> 0
+		(x : xs) -> x * pow + parseIntegralPart base (pow * base) xs
+
+	posParse :: Bool -> Integer -> [Integer] -> [Integer] -> String -> Maybe (Integer, [Integer], [Integer])
+	posParse doted base before after p = case p of
+		[] -> Just (base, before, after)
+
+		('.' : xs) ->
+			if doted
+			then Nothing
+			else posParse True base before after xs
+
+		('#' : xs) ->
+			case readMaybe xs :: Maybe Integer of
+				Nothing -> Nothing
+				Just newbase ->
+					if newbase < 0 || newbase > 36
+					then Nothing
+					else Just (newbase, before, after)
+
+		(x : xs) -> case charToDigit x of
+			Nothing -> Nothing
+			Just d ->
+				if doted
+				then posParse doted base before (d : after) xs
+				else posParse doted base (d : before) after xs
+
+	charToDigit :: Char -> Maybe Integer
+	charToDigit c = case c of
+		'0' -> Just 0
+		'1' -> Just 1
+		'2' -> Just 2
+		'3' -> Just 3
+		'4' -> Just 4
+		'5' -> Just 5
+		'6' -> Just 6
+		'7' -> Just 7
+		'8' -> Just 8
+		'9' -> Just 9
+		'a' -> Just 10
+		'A' -> Just 10
+		'b' -> Just 11
+		'B' -> Just 11
+		'c' -> Just 12
+		'C' -> Just 12
+		'd' -> Just 13
+		'D' -> Just 13
+		'e' -> Just 14
+		'E' -> Just 14
+		'f' -> Just 15
+		'F' -> Just 15
+		'g' -> Just 16
+		'G' -> Just 16
+		'h' -> Just 17
+		'H' -> Just 17
+		'i' -> Just 18
+		'I' -> Just 18
+		'j' -> Just 19
+		'J' -> Just 19
+		'k' -> Just 20
+		'K' -> Just 20
+		'l' -> Just 21
+		'L' -> Just 21
+		'm' -> Just 22
+		'M' -> Just 22
+		'n' -> Just 23
+		'N' -> Just 23
+		'o' -> Just 24
+		'O' -> Just 24
+		'p' -> Just 25
+		'P' -> Just 25
+		'q' -> Just 26
+		'Q' -> Just 26
+		'r' -> Just 27
+		'R' -> Just 27
+		's' -> Just 28
+		'S' -> Just 28
+		't' -> Just 29
+		'T' -> Just 29
+		'u' -> Just 30
+		'U' -> Just 30
+		'v' -> Just 31
+		'V' -> Just 31
+		'w' -> Just 32
+		'W' -> Just 32
+		'x' -> Just 33
+		'X' -> Just 33
+		'y' -> Just 34
+		'Y' -> Just 34
+		'z' -> Just 35
+		'Z' -> Just 35
+		oth -> Nothing
+
 	sign = if head s == '-' then -1 else 1
 	positive = if sign > 0 then s else tail s -- for some reason, readFloat does not work with negatives
 
