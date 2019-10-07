@@ -128,7 +128,26 @@ readHFloat s = case posParse False 10 [] [] positive of
 		oth -> Nothing
 
 	sign = if head s == '-' then -1 else 1
-	positive = if sign > 0 then s else tail s -- for some reason, readFloat does not work with negatives
+	positive = if sign > 0 then s else tail s
+
+showRational :: Int -> Int -> Rational -> String
+showRational base n r = (if r < 0 then "-" else "") ++ h ++ "." ++ f
+	where
+	bb = toInteger base
+	d = round ((abs r) * ((toInteger (base ^ n)) % 1))
+	s = showIntegerB bb (d :: Integer)
+	s' = replicate (n - length s + 1) '0' ++ s
+	(h, f) = splitAt (length s' - n) s'
+
+showIntegerB :: Integer -> Integer -> String
+showIntegerB base 0 = "0"
+showIntegerB base n = reverse $ loop n
+	where
+	loop 0 = ""
+	loop n = show dig ++ loop next
+		where
+		dig = n `mod` base
+		next = n `div` base
 
 readHFrac :: String -> Maybe Rational
 readHFrac = readMaybe

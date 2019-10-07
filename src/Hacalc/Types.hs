@@ -27,7 +27,6 @@ instance PatternElement HLeafType where
 			else show (numerator x) ++ ('/' : show (denominator x))
 		NumberFrac x False ->
 			showNoZeroes $ fromRational x
-
 	patternElemRead s =
 		if s == "NaN" || s == "Infinity"
 		then NumberNaN
