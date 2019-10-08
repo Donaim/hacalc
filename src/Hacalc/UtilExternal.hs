@@ -138,11 +138,9 @@ showHFloat base n10 r = striped
 	d = round ((abs r) * ((base ^ n) % 1))
 	sign = if r < 0 then "-" else ""
 	x = showIntegerB base d
-	lenx = length x
-	repl = intn - lenx + 1
+	repl = intn - (length x) + 1
 	x' = replicate repl '0' ++ x
-	lenx' = repl + lenx
-	(integralPart, decimalPart) = splitAt (lenx' - intn) x'
+	(integralPart, decimalPart) = splitAt (length x' - intn) x'
 	stripedDecimal = reverse $ dropWhile (== '0') $ reverse decimalPart
 	striped = sign ++ integralPart ++ (if null stripedDecimal then "" else '.' : stripedDecimal)
 
