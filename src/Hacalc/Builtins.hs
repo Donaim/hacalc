@@ -3,6 +3,7 @@ module Hacalc.Builtins where
 
 import Data.Fixed (mod')
 import Data.Ratio (numerator, denominator)
+import Data.Maybe (isJust, isNothing)
 
 import PatternT.All
 import Hacalc.Types
@@ -107,7 +108,7 @@ ruleIsFrac = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (NumberFrac x Nothing) -> Just $ if denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			Leaf (NumberFrac x sf) -> Just $ if isJust sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -116,7 +117,7 @@ ruleIsFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (NumberFrac x (Just b)) -> Just $ if denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			Leaf (NumberFrac x sf) -> Just $ if isNothing sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -249,13 +250,13 @@ numberMul :: HLeafType -> HLeafType -> HLeafType
 numberMul = numberDefaultOpTotal (*)
 
 numberDiv :: HLeafType -> HLeafType -> HLeafType
-numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) (numberDefaultOpGetForm ha hb)) ha hb
+numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
 
 numberPow :: HLeafType -> HLeafType -> HLeafType
-numberPow = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) Nothing)
+numberPow ha hb = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) (numberDefaultOpGetForm (Just 10) ha hb)) ha hb
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
-numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm ha hb)) ha hb
+numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
 
 -----------
 -- UTILS --
@@ -311,18 +312,18 @@ checkBound x imax = case x of
 	HVar {} -> True
 
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
-numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm ha hb)) ha hb
+numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
 
-numberDefaultOpGetForm :: HLeafType -> HLeafType -> Maybe Integer
-numberDefaultOpGetForm a b = case a of
+numberDefaultOpGetForm :: Maybe Integer -> HLeafType -> HLeafType -> Maybe Integer
+numberDefaultOpGetForm d a b = case a of
 	NumberFrac x xf -> xf
 	HVar {} -> case b of
-		HVar {} -> Nothing
-		NumberNaN {} -> Nothing
+		HVar {} -> d
+		NumberNaN {} -> d
 		NumberFrac y yf -> yf
 	NumberNaN {} -> case b of
-		HVar {} -> Nothing
-		NumberNaN {} -> Nothing
+		HVar {} -> d
+		NumberNaN {} -> d
 		NumberFrac y yf -> yf
 
 numberDefaultOp :: (Rational -> Rational -> HLeafType) -> HLeafType -> HLeafType -> HLeafType
