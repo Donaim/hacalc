@@ -238,13 +238,13 @@ numberMul :: HLeafType -> HLeafType -> HLeafType
 numberMul = numberDefaultOpTotal (*)
 
 numberDiv :: HLeafType -> HLeafType -> HLeafType
-numberDiv = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) True)
+numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) (numberDefaultOpGetForm ha hb)) ha hb
 
 numberPow :: HLeafType -> HLeafType -> HLeafType
 numberPow = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) False)
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
-numberMod = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) True)
+numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm ha hb)) ha hb
 
 -----------
 -- UTILS --
@@ -300,7 +300,19 @@ checkBound x imax = case x of
 	HVar {} -> True
 
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
-numberDefaultOpTotal f = numberDefaultOp (\ a b -> NumberFrac (f a b) True)
+numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm ha hb)) ha hb
+
+numberDefaultOpGetForm :: HLeafType -> HLeafType -> Bool
+numberDefaultOpGetForm a b = case a of
+	NumberFrac x xf -> xf
+	HVar {} -> case b of
+		HVar {} -> True
+		NumberNaN {} -> True
+		NumberFrac y yf -> yf
+	NumberNaN {} -> case b of
+		HVar {} -> True
+		NumberNaN {} -> True
+		NumberFrac y yf -> yf
 
 numberDefaultOp :: (Rational -> Rational -> HLeafType) -> HLeafType -> HLeafType -> HLeafType
 numberDefaultOp op a b =
