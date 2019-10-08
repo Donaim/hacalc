@@ -18,7 +18,7 @@ readHFloat "" = Nothing
 readHFloat s = case posParse False 10 [] [] positive of
 	Nothing -> Nothing
 	Just (base, before, after) ->
-		if any (>= base) before || any (>= base) after
+		if any (>= base) before || any (>= base) after || (null before && null after)
 		then Nothing
 		else toRat base before after |> flip (,) base |> Just
 	where
