@@ -23,22 +23,22 @@ ruleMod :: String -> HPureSimplificationF
 ruleMod = ruleModLim Nothing
 
 ruleAddLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
-ruleAddLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberAdd) name)
+ruleAddLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberAdd) name)
 
 ruleMulLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
-ruleMulLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMul) name)
+ruleMulLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberMul) name)
 
 ruleSubLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
-ruleSubLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberSub) name)
+ruleSubLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberSub) name)
 
 ruleDivLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
-ruleDivLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberDiv) name)
+ruleDivLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberDiv) name)
 
 rulePowLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
-rulePowLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberPow) name)
+rulePowLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberPow) name)
 
 ruleModLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
-ruleModLim mlim name = (name, const $ stdNumberRule (withChecker mlim numberMod) name)
+ruleModLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberMod) name)
 
 -- | Do not simplify at all
 ruleEq :: String -> HPureSimplificationF
@@ -350,7 +350,7 @@ stdNumberRule op name t = case t of
 		Branch {} -> Nothing
 
 stdAnyRule :: ([HTree -> Maybe HTree] -> [HTree] -> Maybe HTree) -> String -> HPureSimplificationF
-stdAnyRule func name = (name, wrap)
+stdAnyRule func name = (HVar name, wrap)
 	where
 	wrap simplifies t = case t of
 		(Branch (name : args)) -> func simplifies args
