@@ -130,24 +130,70 @@ readHFloat s = case posParse False 10 [] [] positive of
 	sign = if head s == '-' then -1 else 1
 	positive = if sign > 0 then s else tail s
 
-showRational :: Int -> Int -> Rational -> String
-showRational base n r = (if r < 0 then "-" else "") ++ h ++ "." ++ f
+showHFloat :: Integer -> Integer -> Rational -> String
+showHFloat base n r = striped
 	where
-	bb = toInteger base
-	d = round ((abs r) * ((toInteger (base ^ n)) % 1))
-	s = showIntegerB bb (d :: Integer)
-	s' = replicate (n - length s + 1) '0' ++ s
-	(h, f) = splitAt (length s' - n) s'
+	b = fromInteger base
+	intn = fromInteger n
+	d = round ((abs r) * ((base ^ n) % 1))
+	sign = if r < 0 then "-" else ""
+	x = showIntegerB base d
+	repl = intn - (length x) + 1
+	x' = replicate repl '0' ++ x
+	(integralPart, decimalPart) = splitAt (length x' - intn) x'
+	stripedDecimal = reverse $ dropWhile (== '0') $ reverse decimalPart
+	striped = sign ++ integralPart ++ (if null stripedDecimal then "" else '.' : stripedDecimal)
+	unstriped = sign ++ integralPart ++ "." ++ decimalPart
 
 showIntegerB :: Integer -> Integer -> String
 showIntegerB base 0 = "0"
 showIntegerB base n = reverse $ loop n
 	where
 	loop 0 = ""
-	loop n = show dig ++ loop next
+	loop n = intToChar dig : loop next
 		where
 		dig = n `mod` base
 		next = n `div` base
+
+	intToChar :: Integer -> Char
+	intToChar x = case x of
+		0 -> '0'
+		1 -> '1'
+		2 -> '2'
+		3 -> '3'
+		4 -> '4'
+		5 -> '5'
+		6 -> '6'
+		7 -> '7'
+		8 -> '8'
+		9 -> '9'
+		10 -> 'A'
+		11 -> 'B'
+		12 -> 'C'
+		13 -> 'D'
+		14 -> 'E'
+		15 -> 'F'
+		16 -> 'G'
+		17 -> 'H'
+		18 -> 'I'
+		19 -> 'J'
+		20 -> 'K'
+		21 -> 'L'
+		22 -> 'M'
+		23 -> 'N'
+		24 -> 'O'
+		25 -> 'P'
+		26 -> 'Q'
+		27 -> 'R'
+		28 -> 'S'
+		29 -> 'T'
+		30 -> 'U'
+		31 -> 'V'
+		32 -> 'W'
+		33 -> 'X'
+		34 -> 'Y'
+		35 -> 'Z'
+		ot -> '?' -- ASSUMPTION: max base is 36
 
 readHFrac :: String -> Maybe Rational
 readHFrac = readMaybe
