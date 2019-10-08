@@ -131,19 +131,26 @@ readHFloat s = case posParse False 10 [] [] positive of
 	positive = if sign > 0 then s else tail s
 
 showHFloat :: Integer -> Integer -> Rational -> String
-showHFloat base n r = striped
+showHFloat base n10 r = striped
 	where
-	b = fromInteger base
+	n = if base == 10 then n10 else integerPrecisionBased10 base n10
 	intn = fromInteger n
 	d = round ((abs r) * ((base ^ n) % 1))
 	sign = if r < 0 then "-" else ""
 	x = showIntegerB base d
-	repl = intn - (length x) + 1
+	lenx = length x
+	repl = intn - lenx + 1
 	x' = replicate repl '0' ++ x
-	(integralPart, decimalPart) = splitAt (length x' - intn) x'
+	lenx' = repl + lenx
+	(integralPart, decimalPart) = splitAt (lenx' - intn) x'
 	stripedDecimal = reverse $ dropWhile (== '0') $ reverse decimalPart
 	striped = sign ++ integralPart ++ (if null stripedDecimal then "" else '.' : stripedDecimal)
-	unstriped = sign ++ integralPart ++ "." ++ decimalPart
+
+integerPrecisionBased10 :: Integer -> Integer -> Integer
+integerPrecisionBased10 base precision = loop 0 1
+	where
+	target = 10 ^ precision
+	loop i b = if b < target then loop (i + 1) (b * base) else i
 
 showIntegerB :: Integer -> Integer -> String
 showIntegerB base 0 = "0"
