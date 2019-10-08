@@ -107,7 +107,7 @@ ruleIsFrac = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (NumberFrac x sf) -> Just $ if sf == False || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			Leaf (NumberFrac x Nothing) -> Just $ if denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -116,7 +116,7 @@ ruleIsFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[x] -> case x of
-			Leaf (NumberFrac x sf) -> Just $ if sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+			Leaf (NumberFrac x (Just b)) -> Just $ if denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 			other -> Nothing
 		(_) -> Nothing
 
@@ -124,10 +124,21 @@ ruleFloat :: String -> HPureSimplificationF
 ruleFloat = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[x] -> case x of
-			Leaf (NumberFrac n sf) -> Just $ if sf then Leaf $ NumberFrac n False else x
+		[x] -> floatBase 10 x
+		[x, base] -> case base of
+			Leaf (HVar s) -> case readBaseInteger s of
+				Nothing -> Nothing
+				Just b -> floatBase b x
 			other -> Nothing
 		(_) -> Nothing
+
+	floatBase :: Integer -> HTree -> Maybe HTree
+	floatBase b x = case x of
+		Leaf (NumberFrac n sf) -> Just $ case sf of
+			Just ob -> if ob == b then x else correct
+			Nothing -> correct
+			where correct = Leaf (NumberFrac n (Just b))
+		other -> Nothing
 
 ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
@@ -241,7 +252,7 @@ numberDiv :: HLeafType -> HLeafType -> HLeafType
 numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) (numberDefaultOpGetForm ha hb)) ha hb
 
 numberPow :: HLeafType -> HLeafType -> HLeafType
-numberPow = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) False)
+numberPow = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) Nothing)
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
 numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm ha hb)) ha hb
@@ -302,16 +313,16 @@ checkBound x imax = case x of
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
 numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm ha hb)) ha hb
 
-numberDefaultOpGetForm :: HLeafType -> HLeafType -> Bool
+numberDefaultOpGetForm :: HLeafType -> HLeafType -> Maybe Integer
 numberDefaultOpGetForm a b = case a of
 	NumberFrac x xf -> xf
 	HVar {} -> case b of
-		HVar {} -> True
-		NumberNaN {} -> True
+		HVar {} -> Nothing
+		NumberNaN {} -> Nothing
 		NumberFrac y yf -> yf
 	NumberNaN {} -> case b of
-		HVar {} -> True
-		NumberNaN {} -> True
+		HVar {} -> Nothing
+		NumberNaN {} -> Nothing
 		NumberFrac y yf -> yf
 
 numberDefaultOp :: (Rational -> Rational -> HLeafType) -> HLeafType -> HLeafType -> HLeafType

@@ -14,19 +14,19 @@ type Rulesets a = [[SimplifyPattern a]]
 data HLeafType
 	= HVar String
 	| NumberNaN
-	| NumberFrac Rational Bool -- ^ Bool True: be showed as fraction, False: showed as floating
+	| NumberFrac Rational (Maybe Integer) -- ^ Just `base' or `fraction' display forms
 	deriving (Show, Read)
 
 instance PatternElement HLeafType where
 	patternElemShow x = case x of
 		HVar s -> s
 		NumberNaN -> "NaN"
-		NumberFrac x True ->
+		NumberFrac x Nothing ->
 			if denominator x == 1
 			then show $ numerator x
 			else show (numerator x) ++ ('/' : show (denominator x))
-		NumberFrac x False ->
-			showHFloat 10 5 x
+		NumberFrac x (Just b) ->
+			showHFloat b 5 x
 
 	patternElemRead s =
 		if s == "NaN" || s == "Infinity"
@@ -34,10 +34,10 @@ instance PatternElement HLeafType where
 		else case break (== '/') s of
 			([], ys) -> HVar s
 			(xs, []) -> case readHFloat s of
-				Just (r, b) -> NumberFrac r False
+				Just (r, b) -> NumberFrac r (Just b)
 				Nothing -> HVar s
 			(xs, ys) -> case r of
-				Just (w, wb) -> NumberFrac w True
+				Just (w, wb) -> NumberFrac w Nothing
 				Nothing -> HVar s
 				where
 				r = do

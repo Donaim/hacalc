@@ -46,13 +46,9 @@ readHFloat s = case posParse False 10 [] [] positive of
 			then Nothing
 			else posParse True base before after xs
 
-		('#' : xs) ->
-			case readMaybe xs :: Maybe Integer of
-				Nothing -> Nothing
-				Just newbase ->
-					if newbase < 0 || newbase > 36
-					then Nothing
-					else Just (newbase, before, after)
+		('#' : xs) -> do
+			newbase <- readBaseInteger xs
+			Just (newbase, before, after)
 
 		(x : xs) -> case charToDigit x of
 			Nothing -> Nothing
@@ -199,6 +195,26 @@ showIntegerB base n = reverse $ loop n
 		34 -> 'Y'
 		35 -> 'Z'
 		ot -> '?' -- ASSUMPTION: max base is 36
+
+readNonnegativeInteger :: String -> Maybe Integer
+readNonnegativeInteger s = do
+	x <- readMaybe s
+	if x < 0
+	then Nothing
+	else Just x
+
+readNonnegativeIntegerMaxed :: Integer -> String -> Maybe Integer
+readNonnegativeIntegerMaxed max s = do
+	x <- readNonnegativeInteger s
+	if x > max
+	then Nothing
+	else Just x
+
+maxBase :: Integer
+maxBase = 36
+
+readBaseInteger :: String -> Maybe Integer
+readBaseInteger = readNonnegativeIntegerMaxed maxBase
 
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
