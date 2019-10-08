@@ -138,7 +138,8 @@ showHFloat base n10 r = striped
 	x' = replicate repl '0' ++ x
 	(integralPart, decimalPart) = splitAt (length x' - intn) x'
 	stripedDecimal = reverse $ dropWhile (== '0') $ reverse decimalPart
-	striped = sign ++ integralPart ++ (if null stripedDecimal then "" else '.' : stripedDecimal)
+	suffix = if base == 10 then "" else '#' : show base
+	striped = sign ++ integralPart ++ (if null stripedDecimal then "" else '.' : stripedDecimal) ++ suffix
 
 integerPrecisionBased10 :: Integer -> Integer -> Integer
 integerPrecisionBased10 base precision = loop 0 1
