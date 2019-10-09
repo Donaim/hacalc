@@ -2,6 +2,7 @@
 module Hacalc.Parser where
 
 import Data.Either
+import Data.Maybe
 import Control.Monad
 import Data.List
 import Data.Char
@@ -9,6 +10,8 @@ import Data.Char
 import PatternT.All
 import Hacalc.Types
 import Hacalc.UtilExternal
+
+import Debug.Trace
 
 partitionString :: String -> String -> (String, String, String)
 partitionString break s =
@@ -99,19 +102,11 @@ splitLeafByNumber x = case x of
 		(xs, []) -> [Atom s]
 		(xs, ys) -> [Atom xs, Atom "*", Atom ys]
 
+-- TODO: make better than O(n*m)
 splitStringByNumber :: String -> (String, String)
-splitStringByNumber original = if isBasedNumber then (original, []) else (l, r)
+splitStringByNumber original = r
 	where
-	(l, r) = loop True [] original
-	isBasedNumber = case r of
-		('#' : xs) -> all isNumber xs
-		other -> False
+	ps = reverse $ zip (inits original) (tails original)
+	filtered = filter (\ (i, t) -> isJust (readHFloat i)) ps
+	r = maybe (original, []) id (listToMaybe filtered)
 
-	loop expectedDot buf s = case s of
-		[] -> (reverse buf, [])
-		(x : xs) ->
-			if isSpace x
-			then (original, [])
-			else if isNumber x || (expectedDot && x == '.')
-			then loop (expectedDot || x /= '.') (x : buf) xs
-			else (reverse buf, x : xs)
