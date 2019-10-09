@@ -20,6 +20,8 @@ ruleDiv :: String -> HPureSimplificationF
 ruleDiv = ruleDivLim Nothing
 rulePow :: String -> HPureSimplificationF
 rulePow = rulePowLim Nothing
+ruleLog :: String -> HPureSimplificationF
+ruleLog = ruleLogLim Nothing
 ruleMod :: String -> HPureSimplificationF
 ruleMod = ruleModLim Nothing
 
@@ -37,6 +39,9 @@ ruleDivLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numbe
 
 rulePowLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 rulePowLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberPow) name)
+
+ruleLogLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
+ruleLogLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberLog) name)
 
 ruleModLim :: Maybe (Integer, Integer) -> String -> HPureSimplificationF
 ruleModLim mlim name = (HVar name, const $ stdNumberRule (withChecker mlim numberMod) name)
@@ -274,6 +279,16 @@ numberPow ha hb = numberDefaultOp (powop ha hb) ha hb
 		then NumberFrac (a ^^ (numerator b)) preciseform -- NOTE: Omega(a)
 		else let r = (fromRational a ** fromRational b) -- NOTE: O(1)
 			in if doubleIsNormal r then NumberFrac (toRational r) approxform else NumberNaN
+
+	preciseform = (numberDefaultOpGetForm Nothing ha hb)
+	approxform  = maybe (Just 10) Just preciseform
+
+numberLog :: HLeafType -> HLeafType -> HLeafType
+numberLog ha hb = numberDefaultOp (logop ha hb) ha hb
+	where
+	logop ha hb a b =
+		let r = logBase (fromRational a) (fromRational b)
+		in if doubleIsNormal r then NumberFrac (toRational r) approxform else NumberNaN
 
 	preciseform = (numberDefaultOpGetForm Nothing ha hb)
 	approxform  = maybe (Just 10) Just preciseform

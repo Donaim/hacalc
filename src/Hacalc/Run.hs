@@ -122,6 +122,7 @@ hacalcPureRules =
 	, ruleSub        "$sub"
 	, ruleDiv        "$div"
 	, rulePow        "$pow"
+	, ruleLog        "$log"
 	, ruleMod        "$mod"
 	, ruleEqual      "$equal?"
 	, ruleEq         "$eq?"
