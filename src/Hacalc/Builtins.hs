@@ -271,11 +271,12 @@ numberPow ha hb = numberDefaultOp (powop ha hb) ha hb
 	where
 	powop ha hb a b =
 		if denominator b == 1
-		then ok (a ^^ (numerator b)) -- NOTE: Omega(a)
+		then NumberFrac (a ^^ (numerator b)) preciseform -- NOTE: Omega(a)
 		else let r = (fromRational a ** fromRational b) -- NOTE: O(1)
-			in if doubleIsNormal r then ok (toRational r) else NumberNaN
-		where
-		ok x = NumberFrac x (numberDefaultOpGetForm (Just 10) ha hb)
+			in if doubleIsNormal r then NumberFrac (toRational r) approxform else NumberNaN
+
+	preciseform = (numberDefaultOpGetForm Nothing ha hb)
+	approxform  = maybe (Just 10) Just preciseform
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
 numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
