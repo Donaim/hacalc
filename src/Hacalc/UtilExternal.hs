@@ -6,7 +6,6 @@ import Data.Coerce (coerce)
 import Data.Maybe
 import Text.Read (readMaybe)
 import Data.Ratio (denominator, numerator, (%))
-import GHC.Real (Ratio(..))
 import Numeric (showFFloat, readFloat)
 
 (|>) :: a -> (a -> b) -> b
@@ -21,7 +20,7 @@ readHFloat s = do
 	then Nothing
 	else Just (toRat base before after, base)
 	where
-	toRat base before after = ((sign * integralPart) :% 1) + (numer :% denom)
+	toRat base before after = ((sign * ((integralPart * denom) + numer)) % denom)
 		where
 		integralPart = parseIntegralPart base 1 before
 		(numer, denom) = parseDecimalPart base 0 base after
