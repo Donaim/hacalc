@@ -12,6 +12,23 @@ import Numeric (showFFloat, readFloat)
 (|>) x f = f x
 infixl 0 |>
 
+readHRational :: String -> Maybe (Rational, Maybe Integer)
+readHRational s = case break (== '/') s of
+	([], ys) -> Nothing
+	(xs, []) -> case readHFloat s of
+		Nothing -> Nothing
+		Just (r, b) -> Just (r, (Just b))
+	(xs, ys) -> case r of
+		Nothing -> Nothing
+		Just w -> Just (w, Nothing)
+		where
+		r = do
+			(n, nb) <- readHFloat nums
+			(d, db) <- readHFloat dens
+			Just (n / d)
+		nums = xs
+		dens = tail ys
+
 readHFloat :: String -> Maybe (Rational, Integer)
 readHFloat "" = Nothing
 readHFloat s = do

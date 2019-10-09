@@ -107,6 +107,6 @@ splitStringByNumber :: String -> (String, String)
 splitStringByNumber original = r
 	where
 	ps = reverse $ zip (inits original) (tails original)
-	filtered = filter (\ (i, t) -> isJust (readHFloat i)) ps
+	filtered = filter (\ (i, t) -> isJust (readHRational i)) ps
 	r = maybe (original, []) id (listToMaybe filtered)
 

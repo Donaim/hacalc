@@ -31,21 +31,9 @@ instance PatternElement HLeafType where
 	patternElemRead s =
 		if s == "NaN" || s == "Infinity"
 		then NumberNaN
-		else case break (== '/') s of
-			([], ys) -> HVar s
-			(xs, []) -> case readHFloat s of
-				Just (r, b) -> NumberFrac r (Just b)
-				Nothing -> HVar s
-			(xs, ys) -> case r of
-				Just (w, wb) -> NumberFrac w Nothing
-				Nothing -> HVar s
-				where
-				r = do
-					(n, nb) <- readHFloat nums
-					(d, db) <- readHFloat dens
-					Just ((n / d), nb)
-				nums = xs
-				dens = tail ys
+		else case readHRational s of
+			Nothing -> HVar s
+			Just (r, b) -> NumberFrac r b
 
 instance Eq HLeafType where
 	a == b = case a of
