@@ -267,7 +267,13 @@ numberDiv :: HLeafType -> HLeafType -> HLeafType
 numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
 
 numberPow :: HLeafType -> HLeafType -> HLeafType
-numberPow ha hb = numberDefaultOp (\ a b -> NumberFrac (toRational (fromRational a ** fromRational b)) (numberDefaultOpGetForm (Just 10) ha hb)) ha hb
+numberPow ha hb = numberDefaultOp (powop ha hb) ha hb
+	where
+	powop ha hb a b = NumberFrac (powfunc a b) (numberDefaultOpGetForm (Just 10) ha hb)
+	powfunc a b =
+		if denominator b == 1
+		then a ^^ (numerator b) -- NOTE: Omega(a)
+		else toRational (fromRational a ** fromRational b) -- NOTE: O(1)
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
 numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
