@@ -79,86 +79,72 @@ ruleOr = stdAnyRule func
 		else falseLeaf
 
 ruleIsNum :: String -> HPureSimplificationF
-ruleIsNum = stdAnyRule func
+ruleIsNum = stdUnaryRule func
 	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			(Leaf x) -> case x of
-				(NumberNaN {}) -> Just $ falseLeaf
-				(NumberFrac {}) -> Just $ trueLeaf
-				other -> Nothing
-			other -> Nothing
-		(_) -> Nothing
+	func x = case x of
+		(NumberNaN {}) -> Just $ falseLeaf
+		(NumberFrac {}) -> Just $ trueLeaf
+		other -> Nothing
 
 ruleIsNan :: String -> HPureSimplificationF
-ruleIsNan = stdAnyRule func
+ruleIsNan = stdUnaryRule func
 	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			(Leaf (NumberNaN {})) -> Just $ trueLeaf
-			other -> Just $ falseLeaf
-		(_) -> Nothing
+	func x = case x of
+		(NumberNaN {}) -> Just $ trueLeaf
+		other -> Just $ falseLeaf
 
 ruleIsInt :: String -> HPureSimplificationF
-ruleIsInt = stdAnyRule func
+ruleIsInt = stdUnaryRule func
 	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			Leaf (NumberFrac x sf) -> Just $ if denominator x == 1 then trueLeaf else falseLeaf
-			other -> Nothing
-		(_) -> Nothing
+	func x = case x of
+		(NumberFrac x sf) -> Just $ if denominator x == 1 then trueLeaf else falseLeaf
+		other -> Nothing
 
 ruleIsFrac :: String -> HPureSimplificationF
-ruleIsFrac = stdAnyRule func
+ruleIsFrac = stdUnaryRule func
 	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			Leaf (NumberFrac x sf) -> Just $ if isJust sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
-			other -> Nothing
-		(_) -> Nothing
+	func x = case x of
+		(NumberFrac x sf) -> Just $ if isJust sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+		other -> Nothing
 
 ruleIsFloat :: String -> HPureSimplificationF
-ruleIsFloat = stdAnyRule func
+ruleIsFloat = stdUnaryRule func
 	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			Leaf (NumberFrac x sf) -> Just $ if isNothing sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
-			other -> Nothing
-		(_) -> Nothing
+	func x = case x of
+		(NumberFrac x sf) -> Just $ if isNothing sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+		other -> Nothing
 
 ruleFloat :: String -> HPureSimplificationF
-ruleFloat = stdAnyRule func
+ruleFloat = stdAnyNormalRule func
 	where
-	func simplifyF args = case args of
+	func args = case args of
 		[x] -> floatBase 10 x
 		[x, base] -> case base of
-			Leaf (NumberFrac b sf) ->
+			(NumberFrac b sf) ->
 				if denominator b == 1
 				then floatBase (numerator b) x
 				else Nothing
 			other -> Nothing
 		(_) -> Nothing
 
-	floatBase :: Integer -> HTree -> Maybe HTree
+	floatBase :: Integer -> HLeafType -> Maybe HTree
 	floatBase b x =
 		if b < 0 || b > maxBase
 		then Nothing
 		else case x of
-			Leaf (NumberFrac n sf) -> Just $ case sf of
-				Just ob -> if ob == b then x else correct
+			(NumberFrac n sf) -> Just $ case sf of
+				Just ob -> if ob == b then Leaf x else correct
 				Nothing -> correct
 				where correct = Leaf (NumberFrac n (Just b))
 			other -> Nothing
 
 ruleFrac :: String -> HPureSimplificationF
-ruleFrac = stdAnyRule func
+ruleFrac = stdUnaryRule func
 	where
-	func simplifyF args = case args of
-		[x] -> case x of
-			Leaf (NumberFrac n Nothing) -> Just x
-			Leaf (NumberFrac n just) -> Just (Leaf (NumberFrac n Nothing))
-			other -> Nothing
-		(_) -> Nothing
+	func x = case x of
+		(NumberFrac n Nothing) -> Just (Leaf x)
+		(NumberFrac n just) -> Just (Leaf (NumberFrac n Nothing))
+		other -> Nothing
 
 ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
