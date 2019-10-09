@@ -145,6 +145,16 @@ ruleFloat = stdAnyRule func
 				where correct = Leaf (NumberFrac n (Just b))
 			other -> Nothing
 
+ruleFrac :: String -> HPureSimplificationF
+ruleFrac = stdAnyRule func
+	where
+	func simplifyF args = case args of
+		[x] -> case x of
+			Leaf (NumberFrac n Nothing) -> Just x
+			Leaf (NumberFrac n just) -> Just (Leaf (NumberFrac n Nothing))
+			other -> Nothing
+		(_) -> Nothing
+
 ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
 	where
