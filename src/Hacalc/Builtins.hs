@@ -127,19 +127,23 @@ ruleFloat = stdAnyRule func
 	func simplifyF args = case args of
 		[x] -> floatBase 10 x
 		[x, base] -> case base of
-			Leaf (HVar s) -> case readBaseInteger s of
-				Nothing -> Nothing
-				Just b -> floatBase b x
+			Leaf (NumberFrac b sf) ->
+				if denominator b == 1
+				then floatBase (numerator b) x
+				else Nothing
 			other -> Nothing
 		(_) -> Nothing
 
 	floatBase :: Integer -> HTree -> Maybe HTree
-	floatBase b x = case x of
-		Leaf (NumberFrac n sf) -> Just $ case sf of
-			Just ob -> if ob == b then x else correct
-			Nothing -> correct
-			where correct = Leaf (NumberFrac n (Just b))
-		other -> Nothing
+	floatBase b x =
+		if b < 0 || b > maxBase
+		then Nothing
+		else case x of
+			Leaf (NumberFrac n sf) -> Just $ case sf of
+				Just ob -> if ob == b then x else correct
+				Nothing -> correct
+				where correct = Leaf (NumberFrac n (Just b))
+			other -> Nothing
 
 ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
