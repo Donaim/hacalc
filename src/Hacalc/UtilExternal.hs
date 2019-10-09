@@ -208,6 +208,12 @@ maxBase = 36
 readBaseInteger :: String -> Maybe Integer
 readBaseInteger = readRangedInteger 2 maxBase
 
+doubleIsNormal :: Double -> Bool
+doubleIsNormal x = x == x && x /= doubleInfinity
+
+doubleInfinity :: Double
+doubleInfinity = 1 / 0
+
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
 

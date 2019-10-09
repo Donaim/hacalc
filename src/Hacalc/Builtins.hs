@@ -269,11 +269,13 @@ numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else Number
 numberPow :: HLeafType -> HLeafType -> HLeafType
 numberPow ha hb = numberDefaultOp (powop ha hb) ha hb
 	where
-	powop ha hb a b = NumberFrac (powfunc a b) (numberDefaultOpGetForm (Just 10) ha hb)
-	powfunc a b =
+	powop ha hb a b =
 		if denominator b == 1
-		then a ^^ (numerator b) -- NOTE: Omega(a)
-		else toRational (fromRational a ** fromRational b) -- NOTE: O(1)
+		then ok (a ^^ (numerator b)) -- NOTE: Omega(a)
+		else let r = (fromRational a ** fromRational b) -- NOTE: O(1)
+			in if doubleIsNormal r then ok (toRational r) else NumberNaN
+		where
+		ok x = NumberFrac x (numberDefaultOpGetForm (Just 10) ha hb)
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
 numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
