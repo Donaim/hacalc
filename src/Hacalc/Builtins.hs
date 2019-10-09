@@ -300,36 +300,6 @@ numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else Number
 -- UTILS --
 -----------
 
-trueLeaf :: HTree
-trueLeaf = Leaf (HVar "True")
-
-falseLeaf :: HTree
-falseLeaf = Leaf (HVar "False")
-
-funcRuleEqual :: Maybe Integer -> [HTree -> Maybe HTree] -> [HTree] -> Maybe HTree
-funcRuleEqual mlim simplifies args = case args of
-	(x : xs) ->
-		let simplifiedxs = map (sloop (applyFirstSimplificationF simplifies)) xs
-		in let simplifiedx = sloop (applyFirstSimplificationF simplifies) x
-			in if all (== simplifiedx) simplifiedxs
-				then Just $ trueLeaf
-				else Just $ falseLeaf
-	(_) -> Nothing
-
-	where
-	sloop :: (HTree -> Maybe HTree) -> HTree -> HTree
-	sloop = maybe applySimplificationsUntil0LastF (applySimplificationsUntil0LastFLim) mlim
-
-applySimplificationsUntil0LastFLim :: Integer -> (HTree -> Maybe HTree) -> HTree -> HTree
-applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
-	where
-	loop n t =
-		if n >= lim
-		then t
-		else case func t of
-			Nothing -> t
-			Just newt -> loop (n + 1) newt
-
 numMaybeInt :: HLeafType -> Maybe Integer
 numMaybeInt n = case n of
 	NumberFrac x sf -> if denominator x == 1 then Just (numerator x) else Nothing
@@ -388,13 +358,6 @@ stdNumberRule op name t = case t of
 			other -> Just l
 		Branch {} -> Nothing
 
-stdAnyRule :: ([HTree -> Maybe HTree] -> [HTree] -> Maybe HTree) -> String -> HPureSimplificationF
-stdAnyRule func name = (HVar name, wrap)
-	where
-	wrap simplifies t = case t of
-		(Branch (name : args)) -> func simplifies args
-		(_) -> Nothing
-
 differentOrNothing :: HTree -> HTree -> Maybe HTree
 differentOrNothing failcase t = case t of
 	(Branch (x : xs)) ->
@@ -438,5 +401,69 @@ withOpOnMaybeNums to op failcase mnums = loop Nothing mnums
 					Just acc -> (to acc) : treeArgs
 				right = [Branch (failcase : allArgs)]
 
+-------------------
+-- GENERAL UTILS --
+-------------------
 
+trueLeaf :: (PatternElement a) => Tree a
+trueLeaf = Leaf $ patternElemRead "True"
 
+falseLeaf :: (PatternElement a) => Tree a
+falseLeaf = Leaf $ patternElemRead "False"
+
+funcRuleEqual :: (PatternElement a) => Maybe Integer -> [Tree a -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)
+funcRuleEqual mlim simplifies args = case args of
+	(x : xs) ->
+		let simplifiedxs = map (sloop (applyFirstSimplificationF simplifies)) xs
+		in let simplifiedx = sloop (applyFirstSimplificationF simplifies) x
+			in if all (== simplifiedx) simplifiedxs
+				then Just $ trueLeaf
+				else Just $ falseLeaf
+	(_) -> Nothing
+
+	where
+	sloop :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Tree a
+	sloop = maybe applySimplificationsUntil0LastF (applySimplificationsUntil0LastFLim) mlim
+
+stdBinaryRule :: (PatternElement a) => (a -> a -> Maybe (Tree a)) -> String -> PureSimplificationF a
+stdBinaryRule func = stdAnyNormalRule wrap
+	where
+	wrap args = case args of
+		[x, y] -> func x y
+		other -> Nothing
+
+stdUnaryRule :: (PatternElement a) => (a -> Maybe (Tree a)) -> String -> PureSimplificationF a
+stdUnaryRule func = stdAnyNormalRule wrap
+	where
+	wrap args = case args of
+		[x] -> func x
+		other -> Nothing
+
+stdAnyNormalRule :: (PatternElement a) => ([a] -> Maybe (Tree a)) -> String -> PureSimplificationF a
+stdAnyNormalRule func = stdAnyRule wrap
+	where
+	wrap simplifies args = do
+		c <- collect [] args
+		func c
+
+	collect buf [] = Just (reverse buf)
+	collect buf (x : xs)= case x of
+		Branch {} -> Nothing
+		Leaf x -> collect (x : buf) xs
+
+stdAnyRule :: (PatternElement a) => ([(Tree a) -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)) -> String -> PureSimplificationF a
+stdAnyRule func name = (patternElemRead name, wrap)
+	where
+	wrap simplifies t = case t of
+		(Branch (name : args)) -> func simplifies args
+		(_) -> Nothing
+
+applySimplificationsUntil0LastFLim :: (PatternElement a) => Integer -> (Tree a -> Maybe (Tree a)) -> Tree a -> Tree a
+applySimplificationsUntil0LastFLim lim func t0 = loop 0 t0
+	where
+	loop n t =
+		if n >= lim
+		then t
+		else case func t of
+			Nothing -> t
+			Just newt -> loop (n + 1) newt
