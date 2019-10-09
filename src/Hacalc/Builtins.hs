@@ -2,7 +2,7 @@
 module Hacalc.Builtins where
 
 import Data.Fixed (mod')
-import Data.Ratio (numerator, denominator)
+import Data.Ratio (numerator, denominator, (%))
 import Data.Maybe (isJust, isNothing)
 
 import PatternT.All
@@ -139,12 +139,22 @@ ruleFloat = stdAnyNormalRule func
 			other -> Nothing
 
 ruleFrac :: String -> HPureSimplificationF
-ruleFrac = stdUnaryRule func
-	where
-	func x = case x of
-		(NumberFrac n Nothing) -> Just (Leaf x)
-		(NumberFrac n just) -> Just (Leaf (NumberFrac n Nothing))
-		other -> Nothing
+ruleFrac = stdUnaryNumRule (\ x sf -> Just $ NumberFrac x Nothing)
+
+ruleFloor :: String -> HPureSimplificationF
+ruleFloor = stdUnaryNumRule (\ x sf -> Just $ NumberFrac ((floor x) % 1) sf)
+
+ruleCeiling :: String -> HPureSimplificationF
+ruleCeiling = stdUnaryNumRule (\ x sf -> Just $ NumberFrac ((ceiling x) % 1) sf)
+
+ruleRound :: String -> HPureSimplificationF
+ruleRound = stdUnaryNumRule (\ x sf -> Just $ NumberFrac ((round x) % 1) sf)
+
+ruleSinus :: String -> HPureSimplificationF
+ruleSinus = stdUnaryNumRule (\ x sf -> Just $ NumberFrac (toRational (sin (fromRational x))) (numberFormNotFraction sf))
+
+ruleCosinus :: String -> HPureSimplificationF
+ruleCosinus = stdUnaryNumRule (\ x sf -> Just $ NumberFrac (toRational (cos (fromRational x))) (numberFormNotFraction sf))
 
 ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
@@ -308,6 +318,12 @@ checkBound x imax = case x of
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
 numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
 
+
+numberFormNotFraction :: Maybe Integer -> Maybe Integer
+numberFormNotFraction sf = case sf of
+	Nothing -> Just 10
+	other -> other
+
 numberDefaultOpGetForm :: Maybe Integer -> HLeafType -> HLeafType -> Maybe Integer
 numberDefaultOpGetForm d a b = case a of
 	NumberFrac x xf -> xf
@@ -329,6 +345,13 @@ numberDefaultOp op a b =
 			NumberNaN {} -> NumberNaN
 			HVar {} -> NumberNaN -- FIXME: something more clever
 			NumberFrac b sf -> op a b
+
+stdUnaryNumRule :: (Rational -> Maybe Integer -> Maybe HLeafType) -> String -> HPureSimplificationF
+stdUnaryNumRule op = stdUnaryRule func
+	where
+	func x = case x of
+		(NumberFrac n sf) -> op n sf >>= Just . Leaf
+		other -> Nothing
 
 stdNumberRule :: (HLeafType -> HLeafType -> HLeafType) -> String -> HTree -> Maybe HTree
 stdNumberRule op name t = case t of
