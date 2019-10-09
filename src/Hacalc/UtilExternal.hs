@@ -15,12 +15,11 @@ infixl 0 |>
 
 readHFloat :: String -> Maybe (Rational, Integer)
 readHFloat "" = Nothing
-readHFloat s = case posParse False 10 [] [] positive of
-	Nothing -> Nothing
-	Just (base, before, after) ->
-		if any (>= base) before || any (>= base) after || (null before && null after)
-		then Nothing
-		else toRat base before after |> flip (,) base |> Just
+readHFloat s = do
+	(base, before, after) <- posParse False 10 [] [] positive
+	if any (>= base) before || any (>= base) after || (null before && null after)
+	then Nothing
+	else Just (toRat base before after, base)
 	where
 	toRat base before after = ((sign * integralPart) :% 1) + (numer :% denom)
 		where
@@ -197,17 +196,10 @@ showIntegerB base n = reverse $ loop n
 		35 -> 'Z'
 		ot -> '?' -- ASSUMPTION: max base is 36
 
-readNonnegativeInteger :: String -> Maybe Integer
-readNonnegativeInteger s = do
+readRangedInteger :: Integer -> Integer -> String -> Maybe Integer
+readRangedInteger min max s = do
 	x <- readMaybe s
-	if x < 0
-	then Nothing
-	else Just x
-
-readNonnegativeIntegerMaxed :: Integer -> String -> Maybe Integer
-readNonnegativeIntegerMaxed max s = do
-	x <- readNonnegativeInteger s
-	if x > max
+	if x < min || x > max
 	then Nothing
 	else Just x
 
@@ -215,7 +207,7 @@ maxBase :: Integer
 maxBase = 36
 
 readBaseInteger :: String -> Maybe Integer
-readBaseInteger = readNonnegativeIntegerMaxed maxBase
+readBaseInteger = readRangedInteger 2 maxBase
 
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
