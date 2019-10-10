@@ -231,6 +231,15 @@ doubleIsNormal x = x == x && x /= doubleInfinity
 doubleInfinity :: Double
 doubleInfinity = 1 / 0
 
+intMaxBoundInteger :: Integer
+intMaxBoundInteger = toInteger (maxBound :: Int)
+
+maybeIntegerToNonnegativeInt :: Integer -> Maybe Int
+maybeIntegerToNonnegativeInt x =
+	if x < 0 || x >= intMaxBoundInteger
+	then Nothing
+	else Just (fromInteger x)
+
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
 

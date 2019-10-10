@@ -4,6 +4,7 @@ module Hacalc.Builtins where
 import Data.Fixed (mod')
 import Data.Ratio (numerator, denominator, (%))
 import Data.Maybe (isJust, isNothing)
+import Data.Bits
 
 import PatternT.All
 import Hacalc.Types
@@ -155,6 +156,35 @@ ruleSinus = stdUnaryNumRule (\ x sf -> Just $ NumberFrac (toRational (sin (fromR
 
 ruleCosinus :: String -> HPureSimplificationF
 ruleCosinus = stdUnaryNumRule (\ x sf -> Just $ NumberFrac (toRational (cos (fromRational x))) (numberFormNotFraction sf))
+
+ruleBitOr :: String -> HPureSimplificationF
+ruleBitOr = stdBinaryIntRule (.|.)
+
+ruleBitAnd :: String -> HPureSimplificationF
+ruleBitAnd = stdBinaryIntRule (.&.)
+
+ruleBitXor :: String -> HPureSimplificationF
+ruleBitXor = stdBinaryIntRule xor
+
+ruleBitNot :: String -> HPureSimplificationF
+ruleBitNot = stdUnaryNumRule func
+	where
+	func x sf =
+		if denominator x /= 1
+		then Nothing
+		else Just (NumberFrac (complement (numerator x) % 1) sf)
+
+ruleBitShiftR :: String -> HPureSimplificationF
+ruleBitShiftR = stdBinaryArgumentedRule shiftR
+
+ruleBitShiftL :: String -> HPureSimplificationF
+ruleBitShiftL = stdBinaryArgumentedRule shiftL
+
+ruleBitRotateR :: String -> HPureSimplificationF
+ruleBitRotateR = stdBinaryArgumentedRule rotateR
+
+ruleBitRotateL :: String -> HPureSimplificationF
+ruleBitRotateL = stdBinaryArgumentedRule rotateL
 
 ruleLess :: String -> HPureSimplificationF
 ruleLess = stdAnyRule func
@@ -318,7 +348,6 @@ checkBound x imax = case x of
 numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
 numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
 
-
 numberFormNotFraction :: Maybe Integer -> Maybe Integer
 numberFormNotFraction sf = case sf of
 	Nothing -> Just 10
@@ -345,6 +374,36 @@ numberDefaultOp op a b =
 			NumberNaN {} -> NumberNaN
 			HVar {} -> NumberNaN -- FIXME: something more clever
 			NumberFrac b sf -> op a b
+
+stdBinaryNumRule :: (Rational -> Rational -> Maybe Integer -> Maybe HLeafType) -> String -> HPureSimplificationF
+stdBinaryNumRule op = stdBinaryRule func
+	where
+	func x y = case x of
+		(NumberFrac n sf) -> case y of
+			(NumberFrac w sf2) -> op n w sf >>= Just . Leaf
+			other -> Nothing
+		other -> Nothing
+
+stdBinaryMaybeIntRule :: (Integer -> Integer -> Maybe Integer) -> String -> HPureSimplificationF
+stdBinaryMaybeIntRule op = stdBinaryNumRule func
+	where
+	func a b sf =
+		if denominator a /= 1 || denominator b /= 1
+		then Nothing
+		else case op (numerator a) (numerator b) of
+			Nothing -> Nothing
+			Just x -> Just (NumberFrac (x % 1) sf)
+
+stdBinaryIntRule :: (Integer -> Integer -> Integer) -> String -> HPureSimplificationF
+stdBinaryIntRule op = stdBinaryMaybeIntRule (\ a b -> Just (op a b))
+
+-- for operations like `shiftL' `shiftR' `rotL' `rotR'
+stdBinaryArgumentedRule :: (Integer -> Int -> Integer) -> String -> HPureSimplificationF
+stdBinaryArgumentedRule op = stdBinaryMaybeIntRule func
+	where
+	func a b = do
+		bi <- maybeIntegerToNonnegativeInt b
+		Just (op a bi)
 
 stdUnaryNumRule :: (Rational -> Maybe Integer -> Maybe HLeafType) -> String -> HPureSimplificationF
 stdUnaryNumRule op = stdUnaryRule func
