@@ -155,4 +155,4 @@ hacalcPureRules =
 	]
 
 hacalcDelimitingSymbols :: [String]
-hacalcDelimitingSymbols = ["$", "+", "-", "*", "/", "^"]
+hacalcDelimitingSymbols = ["$", "+", "-", "*", "/", "^", "|", "&", ">>", "<<", "~"]
