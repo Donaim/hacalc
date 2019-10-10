@@ -131,7 +131,7 @@ hacalcPureRules =
 	, ruleBitShiftR  "$bitshiftr"
 	, ruleBitShiftL  "$bitshiftl"
 	, ruleBitRotateR "$bitrotater"
-	, ruleBitRotateL "$bitroaterl"
+	, ruleBitRotateL "$bitrotatel"
 	, ruleEqual      "$equal?"
 	, ruleEq         "$eq?"
 	, ruleEqualDynLim"$eqn?"
