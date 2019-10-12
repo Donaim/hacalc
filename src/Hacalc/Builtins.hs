@@ -130,14 +130,14 @@ ruleFloat = stdAnyNormalRule func
 
 	floatBase :: Integer -> HLeafType -> Maybe HTree
 	floatBase b x =
-		if b < 0 || b > maxBase
-		then Nothing
-		else case x of
+		if isValidBase b
+		then case x of
 			(NumberFrac n sf) -> Just $ case sf of
 				Just ob -> if ob == b then Leaf x else correct
 				Nothing -> correct
 				where correct = Leaf (NumberFrac n (Just b))
 			other -> Nothing
+		else Nothing
 
 ruleFrac :: String -> HPureSimplificationF
 ruleFrac = stdUnaryNumRule (\ x sf -> Just $ NumberFrac x Nothing)

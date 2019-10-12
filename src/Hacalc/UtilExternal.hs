@@ -220,10 +220,15 @@ readRangedInteger min max s = do
 	else Just x
 
 maxBase :: Integer
+minBase :: Integer
 maxBase = 36
+minBase = 2
+
+isValidBase :: Integer -> Bool
+isValidBase x = x <= maxBase && x >= minBase
 
 readBaseInteger :: String -> Maybe Integer
-readBaseInteger = readRangedInteger 2 maxBase
+readBaseInteger = readRangedInteger minBase maxBase
 
 doubleIsNormal :: Double -> Bool
 doubleIsNormal x = x == x && x /= doubleInfinity
