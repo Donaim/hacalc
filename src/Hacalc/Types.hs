@@ -21,12 +21,8 @@ instance PatternElement HLeafType where
 	patternElemShow x = case x of
 		HVar s -> s
 		NumberNaN -> "NaN"
-		NumberFrac x Nothing ->
-			if denominator x == 1
-			then show $ numerator x
-			else show (numerator x) ++ ('/' : show (denominator x))
-		NumberFrac x (Just b) ->
-			showHFloat b 5 x
+		NumberFrac x Nothing -> showFraction x
+		NumberFrac x (Just b) -> showHFloat b 5 x
 
 	patternElemRead s =
 		if s == "NaN" || s == "Infinity"

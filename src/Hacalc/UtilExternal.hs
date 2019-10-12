@@ -212,6 +212,12 @@ showIntegerB base n = reverse $ loop n
 		35 -> 'Z'
 		ot -> '?' -- ASSUMPTION: max base is 36
 
+showFraction :: Rational -> String
+showFraction x =
+	if denominator x == 1
+	then show $ numerator x
+	else show (numerator x) ++ ('/' : show (denominator x))
+
 readRangedInteger :: Integer -> Integer -> String -> Maybe Integer
 readRangedInteger min max s = do
 	x <- readMaybe s
