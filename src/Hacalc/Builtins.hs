@@ -115,6 +115,14 @@ ruleIsFloat = stdUnaryRule func
 		(NumberFrac x sf) -> Just $ if isNothing sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
 		other -> Nothing
 
+ruleIsRational :: String -> HPureSimplificationF
+ruleIsRational = stdUnaryRule func
+	where
+	func x = case x of
+		(NumberFrac {}) -> Just trueLeaf
+		(NumberNaN {}) -> Just falseLeaf
+		(HVar {}) -> Nothing
+
 ruleFloat :: String -> HPureSimplificationF
 ruleFloat = stdAnyNormalRule func
 	where
