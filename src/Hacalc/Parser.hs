@@ -98,12 +98,12 @@ splitLeafByNumber :: Expr -> [Expr]
 splitLeafByNumber x = case x of
 	(Group xs) -> [Group $ concatMap splitLeafByNumber xs]
 	(Atom s qq) ->
-		if qq
+		if (isJust qq)
 		then [x]
 		else case splitStringByNumber s of
 			([], ys) -> [x]
 			(xs, []) -> [x]
-			(xs, ys) -> [Atom xs False, Atom "*" False, Atom ys False]
+			(xs, ys) -> [Atom xs Nothing, Atom "*" Nothing, Atom ys Nothing]
 
 -- TODO: make better than O(n*m)
 splitStringByNumber :: String -> (String, String)
