@@ -76,7 +76,7 @@ concatByNumbers :: (PatternElement a) => Tree a -> Tree a
 concatByNumbers t = case t of
 	Branch [Leaf x, Leaf maybeMult, Leaf y] ->
 		if patternElemShow maybeMult == "*" && isDecimal (patternElemShow x) && not (isDecimal (patternElemShow y))
-		then Leaf $ patternElemRead $ patternElemShow x ++ patternElemShow y
+		then Leaf $ patternElemRead (patternElemShow x ++ patternElemShow y) Nothing
 		else t
 	Branch xs -> Branch (map concatByNumbers xs)
 	other -> t

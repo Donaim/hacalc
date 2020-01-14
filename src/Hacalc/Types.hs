@@ -24,7 +24,7 @@ instance PatternElement HLeafType where
 		NumberFrac x Nothing -> showFraction x
 		NumberFrac x (Just b) -> showHFloat b 5 x
 
-	patternElemRead s =
+	patternElemRead s qq =
 		if s == "NaN" || s == "Infinity"
 		then NumberNaN
 		else case readHRational s of
