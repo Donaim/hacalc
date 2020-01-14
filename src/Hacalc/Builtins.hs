@@ -233,7 +233,7 @@ ruleAlpha = stdAnyRule func
 	getAbstractionArgName :: PatternMatchPart HLeafType -> String -> HTree -> Maybe String
 	getAbstractionArgName match projection t = case matchGetDict match t of
 		Nothing -> Nothing
-		Just d -> case dictGet d (patternElemRead projection Nothing) of
+		Just d -> case dictGet d (patternElemReadUq projection) of
 			Just [Leaf s] -> Just (patternElemShow s)
 			other -> Nothing -- NOTE: not nice because does not notify of error
 
@@ -242,11 +242,11 @@ ruleAlpha = stdAnyRule func
 		where
 		loop free scope t = case t of
 			Leaf s -> case dictGet scope s of
-				Just newname -> Leaf (patternElemRead newname Nothing)
+				Just newname -> Leaf (patternElemReadUq newname)
 				Nothing -> t
 			Branch xs -> case getAbstractionArgName match projection t of
 				Nothing -> Branch (map (loop free scope) xs)
-				Just name -> Branch (map (loop (tail free) (dictAdd scope (patternElemRead name Nothing) (head free))) xs) -- ASSUMPTION: `free' is infinite
+				Just name -> Branch (map (loop (tail free) (dictAdd scope (patternElemReadUq name) (head free))) xs) -- ASSUMPTION: `free' is infinite
 
 ruleBeta :: String -> HPureSimplificationF
 ruleBeta = stdAnyRule func
@@ -427,7 +427,7 @@ stdNumberRule op name t = case t of
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
 		differentOrNothing failcase $ withOp Leaf treeToMaybeNum op failcase rargs
 	where
-	failcase = Leaf (patternElemRead name Nothing)
+	failcase = Leaf (patternElemReadUq name)
 	treeToMaybeNum t = case t of
 		Leaf l -> case l of
 			HVar {} -> Nothing
@@ -482,10 +482,10 @@ withOpOnMaybeNums to op failcase mnums = loop Nothing mnums
 -------------------
 
 trueLeaf :: (PatternElement a) => Tree a
-trueLeaf = Leaf $ patternElemRead "True" Nothing
+trueLeaf = Leaf $ patternElemReadUq "True"
 
 falseLeaf :: (PatternElement a) => Tree a
-falseLeaf = Leaf $ patternElemRead "False" Nothing
+falseLeaf = Leaf $ patternElemReadUq "False"
 
 funcRuleEqual :: (PatternElement a) => Maybe Integer -> [Tree a -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)
 funcRuleEqual mlim simplifies args = case args of
@@ -528,7 +528,7 @@ stdAnyNormalRule func = stdAnyRule wrap
 		Leaf x -> collect (x : buf) xs
 
 stdAnyRule :: (PatternElement a) => ([(Tree a) -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)) -> String -> PureSimplificationF a
-stdAnyRule func name = (patternElemRead name Nothing, wrap)
+stdAnyRule func name = (patternElemReadUq name, wrap)
 	where
 	wrap simplifies t = case t of
 		(Branch (name : args)) -> func simplifies args
