@@ -3,7 +3,7 @@ module Hacalc.Builtins where
 
 import Data.Fixed (mod')
 import Data.Ratio (numerator, denominator, (%))
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isJust, isNothing, maybe)
 import Data.Bits
 
 import PatternT.All
@@ -85,7 +85,8 @@ ruleIsNum = stdUnaryRule func
 	func x = case x of
 		(NumberNaN {}) -> Just $ falseLeaf
 		(NumberFrac {}) -> Just $ trueLeaf
-		other -> Nothing
+		(NumberIrr {}) -> Just $ trueLeaf
+		HVar {} -> Nothing
 
 ruleIsNan :: String -> HPureSimplificationF
 ruleIsNan = stdUnaryRule func
@@ -106,6 +107,7 @@ ruleIsFrac = stdUnaryRule func
 	where
 	func x = case x of
 		(NumberFrac x sf) -> Just $ if isJust sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+		(NumberIrr x sf) -> Just $ if isNothing sf then trueLeaf else falseLeaf
 		other -> Nothing
 
 ruleIsFloat :: String -> HPureSimplificationF
@@ -113,6 +115,7 @@ ruleIsFloat = stdUnaryRule func
 	where
 	func x = case x of
 		(NumberFrac x sf) -> Just $ if isNothing sf || denominator x == 1 then falseLeaf else trueLeaf -- NOTE: Int is not a Frac
+		(NumberIrr x sf) -> Just $ if isNothing sf then falseLeaf else trueLeaf
 		other -> Nothing
 
 ruleIsRational :: String -> HPureSimplificationF
@@ -120,6 +123,16 @@ ruleIsRational = stdUnaryRule func
 	where
 	func x = case x of
 		(NumberFrac {}) -> Just trueLeaf
+		(NumberIrr {}) -> Just falseLeaf
+		(NumberNaN {}) -> Just falseLeaf
+		(HVar {}) -> Nothing
+
+ruleIsReal :: String -> HPureSimplificationF
+ruleIsReal = stdUnaryRule func
+	where
+	func x = case x of
+		(NumberFrac {}) -> Just trueLeaf
+		(NumberIrr {}) -> Just trueLeaf
 		(NumberNaN {}) -> Just falseLeaf
 		(HVar {}) -> Nothing
 
@@ -148,22 +161,34 @@ ruleFloat = stdAnyNormalRule func
 		else Nothing
 
 ruleFrac :: String -> HPureSimplificationF
-ruleFrac = stdUnaryNumRule (\ x sf -> Just $ NumberFrac x Nothing)
+ruleFrac = stdUnaryNumRule
+	(\ x sf -> Just $ NumberFrac x Nothing)
+	(\ x sf -> Just $ NumberIrr x Nothing)
 
 ruleFloor :: String -> HPureSimplificationF
-ruleFloor = stdUnaryNumRule (\ x sf -> Just $ NumberFrac ((floor x) % 1) sf)
+ruleFloor = stdUnaryNumRule
+	(\ x sf -> Just $ NumberFrac ((floor x) % 1) sf)
+	(\ x sf -> Just $ NumberFrac ((floor x) % 1) sf) -- NOTE: converts real to frac
 
 ruleCeiling :: String -> HPureSimplificationF
-ruleCeiling = stdUnaryNumRule (\ x sf -> Just $ NumberFrac ((ceiling x) % 1) sf)
+ruleCeiling = stdUnaryNumRule
+	(\ x sf -> Just $ NumberFrac ((ceiling x) % 1) sf)
+	(\ x sf -> Just $ NumberFrac ((ceiling x) % 1) sf) -- NOTE: converts real to frac
 
 ruleRound :: String -> HPureSimplificationF
-ruleRound = stdUnaryNumRule (\ x sf -> Just $ NumberFrac ((round x) % 1) sf)
+ruleRound = stdUnaryNumRule
+	(\ x sf -> Just $ NumberFrac ((round x) % 1) sf)
+	(\ x sf -> Just $ NumberFrac ((round (iReal2Rat x)) % 1) sf)  -- NOTE: converts real to frac
 
 ruleSinus :: String -> HPureSimplificationF
-ruleSinus = stdUnaryNumRule (\ x sf -> Just $ NumberFrac (toRational (sin (fromRational x))) (numberFormNotFraction sf))
+ruleSinus = stdUnaryNumRule
+	(\ x sf -> Just $ NumberIrr (sin (fromRational x)) (numberFormNotFraction sf)) -- TODO: add simple rational cases
+	(\ x sf -> Just $ NumberIrr (sin x) (numberFormNotFraction sf))
 
 ruleCosinus :: String -> HPureSimplificationF
-ruleCosinus = stdUnaryNumRule (\ x sf -> Just $ NumberFrac (toRational (cos (fromRational x))) (numberFormNotFraction sf))
+ruleCosinus = stdUnaryNumRule
+	(\ x sf -> Just $ NumberIrr (cos (fromRational x)) (numberFormNotFraction sf)) -- TODO: add simple rational cases
+	(\ x sf -> Just $ NumberIrr (cos x) (numberFormNotFraction sf))
 
 ruleBitOr :: String -> HPureSimplificationF
 ruleBitOr = stdBinaryIntRule (.|.)
@@ -175,12 +200,13 @@ ruleBitXor :: String -> HPureSimplificationF
 ruleBitXor = stdBinaryIntRule xor
 
 ruleBitNot :: String -> HPureSimplificationF
-ruleBitNot = stdUnaryNumRule func
+ruleBitNot = stdUnaryNumRule func rfunc
 	where
 	func x sf =
 		if denominator x /= 1
 		then Nothing
 		else Just (NumberFrac (complement (numerator x) % 1) sf)
+	rfunc x sf = func (iReal2Rat x) sf
 
 ruleBitShiftR :: String -> HPureSimplificationF
 ruleBitShiftR = stdBinaryArgumentedRule shiftR
@@ -294,41 +320,70 @@ compareHacalc a b =
 ----------------
 
 numberAdd :: HLeafType -> HLeafType -> HLeafType
-numberAdd = numberDefaultOpTotal (+)
+numberAdd = numberDefaultOpTotal (+) (+)
 
 numberSub :: HLeafType -> HLeafType -> HLeafType
-numberSub = numberDefaultOpTotal (-)
+numberSub = numberDefaultOpTotal (-) (-)
 
 numberMul :: HLeafType -> HLeafType -> HLeafType
-numberMul = numberDefaultOpTotal (*)
+numberMul = numberDefaultOpTotal (*) (*)
 
 numberDiv :: HLeafType -> HLeafType -> HLeafType
-numberDiv ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (a / b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
+numberDiv ha hb = numberDefaultOp op opr ha hb
+	where
+	op a 0 = NumberNaN
+	op a b = NumberFrac (a / b) (numberDefaultOpGetForm Nothing ha hb)
+
+	opr a 0 = NumberNaN
+	opr a b = NumberIrr (a / b) (numberDefaultOpGetForm (Just 10) ha hb)
 
 numberPow :: HLeafType -> HLeafType -> HLeafType
-numberPow ha hb = numberDefaultOp (powop ha hb) ha hb
+numberPow ha hb = case ha of
+	HVar {} -> NumberNaN -- FIXME: something more clever
+	NumberNaN {} -> NumberNaN
+	NumberFrac a af -> case hb of
+		HVar {} -> NumberNaN -- FIXME: something more clever
+		NumberNaN {} -> NumberNaN
+		NumberFrac b bf ->
+			if denominator b == 1 -- TODO: allow more exponents to be exact. Like Racket does
+			then NumberFrac (a ^^ (numerator b)) preciseform
+			else NumberIrr ((fromRational a) ** (fromRational b)) iform
+		NumberIrr b bf ->
+			NumberIrr ((fromRational a) ** b) iform
+	NumberIrr a af -> case hb of
+		HVar {} -> NumberNaN -- FIXME: something more clever
+		NumberNaN {} -> NumberNaN
+		NumberFrac b bf ->
+			if denominator b == 1
+			then NumberIrr (a ^^ (numerator b)) iform
+			else NumberIrr (a ** (fromRational b)) iform
+		NumberIrr b bf ->
+			NumberIrr (a ** b) iform
 	where
-	powop ha hb a b =
-		if denominator b == 1
-		then NumberFrac (a ^^ (numerator b)) preciseform -- NOTE: Omega(a)
-		else let r = (fromRational a ** fromRational b) -- NOTE: O(1)
-			in if doubleIsNormal r then NumberFrac (toRational r) approxform else NumberNaN
-
 	preciseform = (numberDefaultOpGetForm Nothing ha hb)
-	approxform  = maybe (Just 10) Just preciseform
+	iform = numberDefaultOpGetForm (Just 10) ha hb
 
 numberLog :: HLeafType -> HLeafType -> HLeafType
-numberLog ha hb = numberDefaultOp (logop ha hb) ha hb
+numberLog ha hb = numberDefaultOp logop logopr ha hb
 	where
-	logop ha hb a b =
-		let r = logBase (fromRational a) (fromRational b)
-		in if doubleIsNormal r then NumberFrac (toRational r) approxform else NumberNaN
+	-- TODO: do rationals for some cases
+	logop a b = NumberIrr (logBase (fromRational a) (fromRational b)) iform
+	logopr a b = NumberIrr (logBase a b) iform
 
-	preciseform = (numberDefaultOpGetForm Nothing ha hb)
-	approxform  = maybe (Just 10) Just preciseform
+	preciseform = numberDefaultOpGetForm Nothing ha hb
+	iform = numberDefaultOpGetForm (Just 10) ha hb
 
 numberMod :: HLeafType -> HLeafType -> HLeafType
-numberMod ha hb = numberDefaultOp (\ a b -> if b == 0 then NumberNaN else NumberFrac (mod' a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
+numberMod ha hb = numberDefaultOp op opr ha hb
+	where
+	op a 0 = NumberNaN
+	op a b = NumberFrac (mod' a b) preciseform
+
+	opr a 0 = NumberNaN
+	opr a b = NumberIrr (mod' a b) iform
+
+	preciseform = numberDefaultOpGetForm Nothing ha hb
+	iform = numberDefaultOpGetForm (Just 10) ha hb
 
 -----------
 -- UTILS --
@@ -350,11 +405,15 @@ checkBound2 a b imaxa imaxb = checkBound a imaxa && checkBound b imaxb
 checkBound :: HLeafType -> Integer -> Bool
 checkBound x imax = case x of
 	NumberFrac x sf -> (abs (numerator x) < imax) && (denominator x < imax)
+	NumberIrr r sf -> let x = iReal2Rat r in (abs (numerator x) < imax) && (denominator x < imax) -- NOTE: poor performance
 	NumberNaN {} -> True
 	HVar {} -> True
 
-numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> HLeafType -> HLeafType -> HLeafType
-numberDefaultOpTotal f ha hb = numberDefaultOp (\ a b -> NumberFrac (f a b) (numberDefaultOpGetForm Nothing ha hb)) ha hb
+numberDefaultOpTotal :: (Rational -> Rational -> Rational) -> (MyIreal -> MyIreal -> MyIreal) -> HLeafType -> HLeafType -> HLeafType
+numberDefaultOpTotal f fr ha hb = numberDefaultOp op opr ha hb
+	where
+	op a b = NumberFrac (f a b) (numberDefaultOpGetForm Nothing ha hb)
+	opr a b = NumberIrr (fr a b) (numberDefaultOpGetForm (Just 10) ha hb)
 
 numberFormNotFraction :: Maybe Integer -> Maybe Integer
 numberFormNotFraction sf = case sf of
@@ -364,24 +423,33 @@ numberFormNotFraction sf = case sf of
 numberDefaultOpGetForm :: Maybe Integer -> HLeafType -> HLeafType -> Maybe Integer
 numberDefaultOpGetForm d a b = case a of
 	NumberFrac x xf -> xf
+	NumberIrr x xf -> xf
 	HVar {} -> case b of
 		HVar {} -> d
 		NumberNaN {} -> d
 		NumberFrac y yf -> yf
+		NumberIrr y yf -> yf
 	NumberNaN {} -> case b of
 		HVar {} -> d
 		NumberNaN {} -> d
 		NumberFrac y yf -> yf
+		NumberIrr y yf -> yf
 
-numberDefaultOp :: (Rational -> Rational -> HLeafType) -> HLeafType -> HLeafType -> HLeafType
-numberDefaultOp op a b =
+numberDefaultOp :: (Rational -> Rational -> HLeafType) -> (MyIreal -> MyIreal -> HLeafType) -> HLeafType -> HLeafType -> HLeafType
+numberDefaultOp op opr a b =
 	case a of
 		NumberNaN {} -> NumberNaN
 		HVar {} -> NumberNaN -- FIXME: something more clever
+		NumberIrr x xb -> case b of
+			NumberIrr y yf -> opr x y
+			NumberFrac y yf -> opr x (fromRational y)
+			NumberNaN {} -> NumberNaN
+			HVar {} -> NumberNaN -- FIXME: something more clever
 		NumberFrac a sf -> case b of
 			NumberNaN {} -> NumberNaN
 			HVar {} -> NumberNaN -- FIXME: something more clever
 			NumberFrac b sf -> op a b
+			NumberIrr b sf -> opr (fromRational a) b
 
 stdBinaryNumRule :: (Rational -> Rational -> Maybe Integer -> Maybe HLeafType) -> String -> HPureSimplificationF
 stdBinaryNumRule op = stdBinaryRule func
@@ -413,11 +481,12 @@ stdBinaryArgumentedRule op = stdBinaryMaybeIntRule func
 		bi <- maybeIntegerToNonnegativeInt b
 		Just (op a bi)
 
-stdUnaryNumRule :: (Rational -> Maybe Integer -> Maybe HLeafType) -> String -> HPureSimplificationF
-stdUnaryNumRule op = stdUnaryRule func
+stdUnaryNumRule :: (Rational -> Maybe Integer -> Maybe HLeafType) -> (MyIreal -> Maybe Integer -> Maybe HLeafType) -> String -> HPureSimplificationF
+stdUnaryNumRule op opr = stdUnaryRule func
 	where
 	func x = case x of
 		(NumberFrac n sf) -> op n sf >>= Just . Leaf
+		(NumberIrr n sf) -> opr n sf >>= Just . Leaf
 		other -> Nothing
 
 stdNumberRule :: (HLeafType -> HLeafType -> HLeafType) -> String -> HTree -> Maybe HTree

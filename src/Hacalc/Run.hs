@@ -142,6 +142,7 @@ hacalcPureRules =
 	, ruleIsFrac     "$fraction?"
 	, ruleIsFloat    "$float?"
 	, ruleIsRational "$rat?"
+	, ruleIsReal     "$real?"
 	, ruleFrac       "$fraction"
 	, ruleFloat      "$float"
 	, ruleFloor      "$floor"

@@ -7,6 +7,11 @@ import Data.Maybe
 import Text.Read (readMaybe)
 import Data.Ratio (denominator, numerator, (%))
 import Numeric (showFFloat, readFloat)
+import Data.Number.IReal
+import Data.Number.IReal.IRealOperations
+import Data.Number.IReal.IntegerInterval
+import Data.Number.IReal.IReal
+import Data.Bits (bit)
 
 (|>) :: a -> (a -> b) -> b
 (|>) x f = f x
@@ -250,6 +255,22 @@ maybeIntegerToNonnegativeInt x =
 	if x < 0 || x >= intMaxBoundInteger
 	then Nothing
 	else Just (fromInteger x)
+
+iRealDefaultPrecision :: Integer
+iRealDefaultPrecision = 2
+
+iRealDefaultPrecisionBits :: Int
+iRealDefaultPrecisionBits = (fromInteger $ succ iRealDefaultPrecision) ^ iRealDefaultPrecision
+
+iReal2Rat :: IReal -> Rational
+iReal2Rat x = midI (appr x iRealDefaultPrecisionBits) % (bit iRealDefaultPrecisionBits)
+
+iRealCompareApprox :: IReal -> IReal -> Ordering
+iRealCompareApprox x y =
+	if lowerI dp >= 0 then GT
+	else if upperI dp <= 0 then LT
+	else EQ
+	where dp = appr (x - y) iRealDefaultPrecisionBits
 
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
