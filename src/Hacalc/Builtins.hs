@@ -185,6 +185,23 @@ ruleApprox = stdUnaryNumRule
 	(\ x sf -> Just $ NumberFrac x sf)
 	(\ x sf -> Just $ NumberFrac (iReal2Rat x) sf)
 
+ruleDigits :: String -> HPureSimplificationF
+ruleDigits = stdAnyNormalRule func
+	where
+	func args = case args of
+		[count, x] -> case count of
+			(NumberFrac count sf) ->
+				if denominator count == 1
+				then case x of
+					NumberFrac x b -> Just $ Leaf $ HVar
+					 	(showHFloat (maybe 10 id b) (numerator count) x)  -- FIXME: leave it as number
+					NumberIrr x b -> Just $ Leaf $ HVar
+					 	(showHFloat (maybe 10 id b) (numerator count) (iReal2RatP (2 ^ (numerator count)) x))  -- FIXME: leave it as number
+					other -> Nothing
+				else Nothing
+			other -> Nothing
+		(_) -> Nothing
+
 ruleSinus :: String -> HPureSimplificationF
 ruleSinus = stdUnaryNumRule
 	(\ x sf -> Just $ NumberIrr (sin (fromRational x)) (numberFormNotFraction sf)) -- TODO: add simple rational cases

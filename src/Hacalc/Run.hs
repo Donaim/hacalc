@@ -149,6 +149,7 @@ hacalcPureRules =
 	, ruleCeiling    "$ceiling"
 	, ruleRound      "$round"
 	, ruleApprox     "$approx"
+	, ruleDigits     "$digits"
 	, ruleSinus      "$sinus"
 	, ruleCosinus    "$cosinus"
 	, rulePi         "$pi"

@@ -262,8 +262,11 @@ iRealDefaultPrecision = 2
 iRealDefaultPrecisionBits :: Int
 iRealDefaultPrecisionBits = (fromInteger $ succ iRealDefaultPrecision) ^ iRealDefaultPrecision
 
+iReal2RatP :: Int -> IReal -> Rational
+iReal2RatP p x = midI (appr x p) % (bit p)
+
 iReal2Rat :: IReal -> Rational
-iReal2Rat x = midI (appr x iRealDefaultPrecisionBits) % (bit iRealDefaultPrecisionBits)
+iReal2Rat = iReal2RatP iRealDefaultPrecisionBits
 
 iRealCompareApprox :: IReal -> IReal -> Ordering
 iRealCompareApprox x y =
