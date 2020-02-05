@@ -196,7 +196,7 @@ ruleDigits = stdAnyNormalRule func
 					NumberFrac x b -> Just $ Leaf $ HVar
 					 	(showHFloat (maybe 10 id b) (numerator count) x)  -- FIXME: leave it as number
 					NumberIrr x b -> Just $ Leaf $ HVar
-					 	(showHFloat (maybe 10 id b) (numerator count) (iReal2RatP (2 ^ (numerator count)) x))  -- FIXME: leave it as number
+					 	(showHFloat (maybe 10 id b) (numerator count) (iReal2RatP (fromInteger (numerator count)) x))  -- FIXME: leave it as number
 					other -> Nothing
 				else Nothing
 			other -> Nothing

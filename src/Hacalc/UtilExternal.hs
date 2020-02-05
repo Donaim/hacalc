@@ -11,7 +11,6 @@ import Data.Number.IReal
 import Data.Number.IReal.IRealOperations
 import Data.Number.IReal.IntegerInterval
 import Data.Number.IReal.IReal
-import Data.Bits (bit)
 
 (|>) :: a -> (a -> b) -> b
 (|>) x f = f x
@@ -259,21 +258,23 @@ maybeIntegerToNonnegativeInt x =
 iRealDefaultPrecision :: Integer
 iRealDefaultPrecision = 2
 
-iRealDefaultPrecisionBits :: Int
-iRealDefaultPrecisionBits = (fromInteger $ succ iRealDefaultPrecision) ^ iRealDefaultPrecision
+iRealDefaultPrecisionI :: Int
+iRealDefaultPrecisionI = fromIntegral iRealDefaultPrecision
 
 iReal2RatP :: Int -> IReal -> Rational
-iReal2RatP p x = midI (appr x p) % (bit p)
+iReal2RatP p x = case (readHRational $ showIReal p x) of -- TODO: improve performance-wise
+	Just (r, b) -> r
+	Nothing -> error "Impossible" -- ASSUMPTION: showIReal is always readable
 
 iReal2Rat :: IReal -> Rational
-iReal2Rat = iReal2RatP iRealDefaultPrecisionBits
+iReal2Rat = iReal2RatP iRealDefaultPrecisionI
 
 iRealCompareApprox :: IReal -> IReal -> Ordering
 iRealCompareApprox x y =
 	if lowerI dp >= 0 then GT
 	else if upperI dp <= 0 then LT
 	else EQ
-	where dp = appr (x - y) iRealDefaultPrecisionBits
+	where dp = appr (x - y) iRealDefaultPrecisionI
 
 fst3 :: (a, b, c) -> a
 fst3 (a, b, c) = a
