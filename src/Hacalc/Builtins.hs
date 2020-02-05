@@ -180,6 +180,11 @@ ruleRound = stdUnaryNumRule
 	(\ x sf -> Just $ NumberFrac ((round x) % 1) sf)
 	(\ x sf -> Just $ NumberFrac ((round (iReal2Rat x)) % 1) sf)  -- NOTE: converts real to frac
 
+ruleApprox :: String -> HPureSimplificationF
+ruleApprox = stdUnaryNumRule
+	(\ x sf -> Just $ NumberFrac x sf)
+	(\ x sf -> Just $ NumberFrac (iReal2Rat x) sf)
+
 ruleSinus :: String -> HPureSimplificationF
 ruleSinus = stdUnaryNumRule
 	(\ x sf -> Just $ NumberIrr (sin (fromRational x)) (numberFormNotFraction sf)) -- TODO: add simple rational cases
@@ -189,6 +194,13 @@ ruleCosinus :: String -> HPureSimplificationF
 ruleCosinus = stdUnaryNumRule
 	(\ x sf -> Just $ NumberIrr (cos (fromRational x)) (numberFormNotFraction sf)) -- TODO: add simple rational cases
 	(\ x sf -> Just $ NumberIrr (cos x) (numberFormNotFraction sf))
+
+rulePi :: String -> HPureSimplificationF
+rulePi = stdConstant (Leaf (NumberIrr pi (Just 10)))
+
+-- | Euler number
+ruleExp1 :: String -> HPureSimplificationF
+ruleExp1 = stdConstant (Leaf (NumberIrr (exp 1) (Just 10)))
 
 ruleBitOr :: String -> HPureSimplificationF
 ruleBitOr = stdBinaryIntRule (.|.)
@@ -595,6 +607,13 @@ stdAnyNormalRule func = stdAnyRule wrap
 	collect buf (x : xs)= case x of
 		Branch {} -> Nothing
 		Leaf x -> collect (x : buf) xs
+
+stdConstant :: (PatternElement a) => (Tree a) -> String -> PureSimplificationF a
+stdConstant constTree name = (patternElemReadUq name, wrap)
+	where
+	wrap simplifies t = case t of
+		(Leaf name) -> Just constTree
+		(Branch {}) -> Nothing
 
 stdAnyRule :: (PatternElement a) => ([(Tree a) -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)) -> String -> PureSimplificationF a
 stdAnyRule func name = (patternElemReadUq name, wrap)
