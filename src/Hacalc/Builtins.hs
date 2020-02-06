@@ -310,9 +310,13 @@ ruleBeta = stdAnyRule func
 	where
 	func simplifyF args = case args of
 		[whole] -> case whole of
-			(Branch [body, var]) -> case body of -- DIRTY!: projection
+			(Branch (body : var : vars)) -> case body of -- DIRTY!: projection
 				Branch (x : dot : xs) -> case x of
-					Leaf s -> Just $ mapLeafs (rename s var) (Branch xs)
+					Leaf s -> Just $
+						let first = mapLeafs (rename s var) (Branch xs)
+						in case vars of
+							[] -> first
+							(y : ys) -> Branch ((Branch [first, y]) : ys)
 					Branch {} -> Nothing -- TODO: allow lambda argument to be structured
 				other -> Nothing
 			other -> Nothing
