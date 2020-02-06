@@ -11,6 +11,9 @@ import Hacalc.Types
 import Hacalc.Util
 import Hacalc.UtilExternal
 
+import System.IO.Unsafe
+import Data.IORef
+
 ruleAdd :: String -> HPureSimplificationF
 ruleAdd = ruleAddLim Nothing
 ruleMul :: String -> HPureSimplificationF
@@ -263,6 +266,9 @@ ruleLessOrEq = stdAnyRule func
 		[a, b] -> Just $ if (let x = compareHacalc a b in x == LT || x == EQ) then trueLeaf else falseLeaf
 		(_) -> Nothing
 
+alpharef :: IORef Int -- TODO: is this most efficient way to generate unique names?
+alpharef = unsafePerformIO $ newIORef 0
+
 ruleAlpha :: String -> HPureSimplificationF
 ruleAlpha = stdAnyRule func
 	where
@@ -276,14 +282,10 @@ ruleAlpha = stdAnyRule func
 						Right match -> Just $ tall match (patternElemShow projection) body
 		(_) -> Nothing
 
-	getLeafNames :: HTree -> [String]
-	getLeafNames t = case t of
-		Leaf s -> [patternElemShow s]
-		Branch xs -> concat (map getLeafNames xs)
-
-	getFreeNames :: HTree -> [String] -- TODO: optimize dis *angry face*
-	getFreeNames t = filter (`notElem` taken) $ map (\ i -> '$' : show i) [1 ..]
-		where taken = getLeafNames t
+	getFreeNames :: HTree -> [String]
+	getFreeNames t = map (\ i -> show i ++ suff) [0 ..]
+		where
+		suff = '$' : (show $ unsafePerformIO $ atomicModifyIORef' alpharef (\ x -> (x, x + 1)))
 
 	getAbstractionArgName :: PatternMatchPart HLeafType -> String -> HTree -> Maybe String
 	getAbstractionArgName match projection t = case matchGetDict match t of
@@ -307,9 +309,13 @@ ruleBeta :: String -> HPureSimplificationF
 ruleBeta = stdAnyRule func
 	where
 	func simplifyF args = case args of
-		[abstraction, var, body] -> case abstraction of
-			Leaf s -> Just $ mapLeafs (rename s var) body
-			Branch xs -> Nothing -- TODO: allow abstraction argument to be any match pattern
+		[whole] -> case whole of
+			(Branch [body, var]) -> case body of -- DIRTY!: projection
+				Branch (x : dot : xs) -> case x of
+					Leaf s -> Just $ mapLeafs (rename s var) (Branch xs)
+					Branch {} -> Nothing -- TODO: allow lambda argument to be structured
+				other -> Nothing
+			other -> Nothing
 		(_) -> Nothing
 
 	rename :: HLeafType -> HTree -> (HLeafType -> HTree -> HTree)
@@ -323,7 +329,9 @@ ruleBeta = stdAnyRule func
 	mapLeafs :: (HLeafType -> HTree -> HTree) -> HTree -> HTree
 	mapLeafs f t = case t of
 		(Leaf s) -> f s t
-		(Branch xs) -> Branch (map (mapLeafs f) xs)
+		(Branch xs) -> case map (mapLeafs f) xs of
+			[y] -> y
+			ys -> Branch ys
 
 ---------------
 -- ORDERING --
