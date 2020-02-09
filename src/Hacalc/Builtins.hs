@@ -11,9 +11,6 @@ import Hacalc.Types
 import Hacalc.Util
 import Hacalc.UtilExternal
 
-import System.IO.Unsafe
-import Data.IORef
-
 ruleAdd :: String -> HPureSimplificationF
 ruleAdd = ruleAddLim Nothing
 ruleMul :: String -> HPureSimplificationF
@@ -266,9 +263,6 @@ ruleLessOrEq = stdAnyRule func
 		[a, b] -> Just $ if (let x = compareHacalc a b in x == LT || x == EQ) then trueLeaf else falseLeaf
 		(_) -> Nothing
 
-alpharef :: IORef Int -- TODO: is this most efficient way to generate unique names?
-alpharef = unsafePerformIO $ newIORef 0
-
 ruleAlpha :: String -> HPureSimplificationF
 ruleAlpha = stdAnyRule func
 	where
@@ -282,10 +276,15 @@ ruleAlpha = stdAnyRule func
 						Right match -> Just $ tall match (patternElemShow projection) body
 		(_) -> Nothing
 
-	getFreeNames :: HTree -> [String]
-	getFreeNames t = map (\ i -> show i ++ suff) [0 ..]
+	getFreeNames :: HTree -> [String] -- TODO: optimize dis *angry face*
+	getFreeNames t = filter (`notElem` taken) $ map (:[]) ['a' .. 'z'] ++ map ('x' :) (map show [2 ..])
 		where
-		suff = '$' : (show $ unsafePerformIO $ atomicModifyIORef' alpharef (\ x -> (x, x + 1)))
+		taken = getLeafNames t
+
+		getLeafNames :: HTree -> [String]
+		getLeafNames t = case t of
+			Leaf s -> [patternElemShow s]
+			Branch xs -> concat (map getLeafNames xs)
 
 	getAbstractionArgName :: PatternMatchPart HLeafType -> String -> HTree -> Maybe String
 	getAbstractionArgName match projection t = case matchGetDict match t of
@@ -299,11 +298,19 @@ ruleAlpha = stdAnyRule func
 		where
 		loop free scope t = case t of
 			Leaf s -> case dictGet scope s of
-				Just newname -> Leaf (patternElemReadUq newname)
-				Nothing -> t
+				Just (Just newname) -> Leaf (patternElemReadUq newname)
+				other -> t
 			Branch xs -> case getAbstractionArgName match projection t of
 				Nothing -> Branch (map (loop free scope) xs)
-				Just name -> Branch (map (loop (tail free) (dictAdd scope (patternElemReadUq name) (head free))) xs) -- ASSUMPTION: `free' is infinite
+				Just name ->
+					Branch $ flip map xs $
+						case dictGet scope (patternElemReadUq name) of
+							Just {} -> -- name already taken
+								loop (tail free)
+								     (dictAdd scope (patternElemReadUq name) (Just (head free)))
+							Nothing ->
+								loop free
+								     (dictAdd scope (patternElemReadUq name) Nothing)
 
 ruleBeta :: String -> HPureSimplificationF
 ruleBeta = stdAnyRule func
