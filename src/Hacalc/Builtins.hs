@@ -361,7 +361,7 @@ compareHacalc a b =
 			(Leaf {}) ->
 				GT -- ASSUMPTION: no singleton branches
 			(Branch ys) ->
-				compare (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
+				compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch
 
 ----------------
 -- OPERATIONS --
