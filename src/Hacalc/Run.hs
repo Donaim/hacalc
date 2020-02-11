@@ -80,7 +80,7 @@ hacalcRunTree options rules ctx tree = do
 			(\ lim -> splitAt lim hist)
 			(interpretStepLimit options)
 		(sizes, dropedSizes) = maybe
-			(steps, [])
+			(steps, dropedSteps)
 			(\ lim -> historyLimitTreeSize lim hist)
 			(interpretTreeSizeLimit options)
 
