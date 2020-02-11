@@ -18,6 +18,7 @@ data ArgsT
 	, exprfile :: Maybe String
 	, original :: Bool
 	, limit    :: Maybe Int
+	, trace    :: Bool
 	}
 	deriving (Show, Data, Typeable)
 
@@ -27,6 +28,7 @@ load = Load
 	, exprfile = def &= typ "exprfile"
 	, original = def &= help "Display the original expression in output. Looks like 'expr -> reduced'"
 	, limit    = def &= help "Limit the number of evaluations"
+	, trace    = def &= help "Show step by step process"
 	}
 
 putErrLn :: String -> IO ()
@@ -51,13 +53,17 @@ runOptions = InterpretOptions
 eachLine :: (String -> String) -> (String -> String)
 eachLine f = unlines . map f . lines
 
-interpretPureLine :: Rulesets HLeafType -> String -> String
+interpretPureLine :: Rulesets HLeafType -> String -> (String, [String])
 interpretPureLine rules line = unliftIdentityMonad $
 	case interpretLine runOptions rules () line of
-		Left e -> return $ "Error: " ++ show e
+		Left e -> return ("Error: " ++ show e, [])
 		Right r -> do
 			(answer, taken, droped) <- r
-			return $ answer
+			let hist =
+				taken
+				|> showHistory
+				|> map (\(state, rule) -> "\t(using  " ++ rule ++ ")\n-> " ++ state)
+			return (answer, hist)
 
 getRules :: String -> IO (Rulesets HLeafType)
 getRules text = case readPatterns text of
@@ -66,13 +72,16 @@ getRules text = case readPatterns text of
 	Right p -> do
 		return p
 
-interactFunc :: Rulesets HLeafType -> Bool -> String -> String
-interactFunc rules originalQ text = concatMap (++ "\n") output
+interactFunc :: Rulesets HLeafType -> Bool -> Bool -> String -> String
+interactFunc rules originalQ traceQ text = concatMap (++ "\n") output
 	where
 	filtered = filter (not . null) $ lines text
 	answers = map (interpretPureLine rules) filtered
 	output = map tf (zip answers filtered)
-	tf (answer, original) = if originalQ then original ++ " -> " ++ answer else answer
+	tf ((answer, hist), original) =
+		(if originalQ then "-> " ++ original ++ "\n" else "")
+		++ (if traceQ then (concatMap (\s -> s ++ "\n") hist) else "")
+		++ answer
 
 main :: IO ()
 main = do
@@ -85,7 +94,7 @@ main = do
 	case exprfile args of
 		Just exprfile -> do
 			exprText <- readFile exprfile
-			putStr $ interactFunc rules (original args) exprText
+			putStr $ interactFunc rules (original args) (trace args)  exprText
 		Nothing -> do
-			interact (interactFunc rules (original args))
+			interact (interactFunc rules (original args) (trace args))
 
