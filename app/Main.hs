@@ -53,9 +53,9 @@ runOptions = InterpretOptions
 eachLine :: (String -> String) -> (String -> String)
 eachLine f = unlines . map f . lines
 
-interpretPureLine :: Rulesets HLeafType -> String -> (String, [String])
-interpretPureLine rules line = unliftIdentityMonad $
-	case interpretLine runOptions rules () line of
+interpretPureLine :: Rulesets HLeafType -> InterpretOptions -> String -> (String, [String])
+interpretPureLine rules opts line = unliftIdentityMonad $
+	case interpretLine opts rules () line of
 		Left e -> return ("Error: " ++ show e, [])
 		Right r -> do
 			(answer, taken, droped) <- r
@@ -72,11 +72,11 @@ getRules text = case readPatterns text of
 	Right p -> do
 		return p
 
-interactFunc :: Rulesets HLeafType -> Bool -> Bool -> String -> String
-interactFunc rules originalQ traceQ text = concatMap (++ "\n") output
+interactFunc :: Rulesets HLeafType -> InterpretOptions -> Bool -> Bool -> String -> String
+interactFunc rules opts originalQ traceQ text = concatMap (++ "\n") output
 	where
 	filtered = filter (not . null) $ lines text
-	answers = map (interpretPureLine rules) filtered
+	answers = map (interpretPureLine rules opts) filtered
 	output = map tf (zip answers filtered)
 	tf ((answer, hist), original) =
 		(if originalQ then "-> " ++ original ++ "\n" else "")
@@ -91,10 +91,11 @@ main = do
 
 	ruleText <- readFile (rulefile args)
 	rules <- getRules ruleText
+	let opts = runOptions { interpretStepLimit = limit args }
 	case exprfile args of
 		Just exprfile -> do
 			exprText <- readFile exprfile
-			putStr $ interactFunc rules (original args) (trace args)  exprText
+			putStr $ interactFunc rules opts (original args) (trace args)  exprText
 		Nothing -> do
-			interact (interactFunc rules (original args) (trace args))
+			interact (interactFunc rules opts (original args) (trace args))
 
