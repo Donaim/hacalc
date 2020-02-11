@@ -53,17 +53,17 @@ runOptions = InterpretOptions
 eachLine :: (String -> String) -> (String -> String)
 eachLine f = unlines . map f . lines
 
-interpretPureLine :: Rulesets HLeafType -> InterpretOptions -> String -> (String, [String])
+interpretPureLine :: Rulesets HLeafType -> InterpretOptions -> String -> (String, [String], Bool)
 interpretPureLine rules opts line = unliftIdentityMonad $
 	case interpretLine opts rules () line of
-		Left e -> return ("Error: " ++ show e, [])
+		Left e -> return ("Error: " ++ show e, [], False)
 		Right r -> do
 			(answer, taken, droped) <- r
 			let hist =
 				taken
 				|> showHistory
 				|> map (\(state, rule) -> "\t(using  " ++ rule ++ ")\n-> " ++ state)
-			return (answer, hist)
+			return (answer, hist, null droped)
 
 getRules :: String -> IO (Rulesets HLeafType)
 getRules text = case readPatterns text of
@@ -78,9 +78,13 @@ interactFunc rules opts originalQ traceQ text = concatMap (++ "\n") output
 	filtered = filter (not . null) $ lines text
 	answers = map (interpretPureLine rules opts) filtered
 	output = map tf (zip answers filtered)
-	tf ((answer, hist), original) =
+	tf ((answer, hist, finishedQ), original) =
 		(if originalQ then "-> " ++ original ++ "\n" else "")
-		++ (if traceQ then (concatMap (\s -> s ++ "\n") hist) else "")
+		++ (if traceQ then
+				(concatMap (\s -> s ++ "\n") hist
+				++
+				if finishedQ then "\t(finished)\n" else "\t(not finished)\n")
+			else "")
 		++ answer
 
 main :: IO ()
