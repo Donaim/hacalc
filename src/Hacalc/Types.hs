@@ -22,7 +22,12 @@ data HLeafType
 	| NumberNaN
 	| NumberFrac Rational (Maybe Integer) -- ^ Just `base' or `fraction' display forms
 	| NumberIrr MyIreal (Maybe Integer) -- ^ Just `base' or `fraction' display forms
-	deriving (Show, Read)
+
+instance Show HLeafType where
+	show = patternElemShow
+
+instance Read HLeafType where
+	readsPrec i s = [(patternElemRead s Nothing, "")]
 
 instance PatternElement HLeafType where
 	patternElemShow x = case x of
