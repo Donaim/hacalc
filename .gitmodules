@@ -1,0 +1,3 @@
+[submodule "PatterntCommonFrontend"]
+	path = PatterntCommonFrontend
+	url = https://github.com/Donaim/PatterntCommonFrontend.git
