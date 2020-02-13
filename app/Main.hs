@@ -11,6 +11,7 @@ import System.Exit
 
 import PatternT.All
 import Hacalc.All
+import PatterntCommonFrontend.All
 
 data ArgsT
 	= Load

@@ -8,9 +8,8 @@ import Data.Bits
 
 import PatternT.All
 import Hacalc.Types
-import Hacalc.Util
 import Hacalc.UtilExternal
-import Hacalc.Parsing
+import PatterntCommonFrontend.All
 
 ruleAdd :: String -> HPureSimplificationF
 ruleAdd = ruleAddLim Nothing

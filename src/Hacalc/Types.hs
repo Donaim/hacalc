@@ -2,62 +2,18 @@
 
 module Hacalc.Types where
 
-import PatternT.Types
-import PatternT.Util
+import PatternT.All
+import PatterntCommonFrontend.All
 import Hacalc.UtilExternal
 import Data.Ratio (denominator, numerator)
 import Data.List (break)
 import Data.Number.IReal
-
-type QuoteInfo = Maybe (Char, Bool)       -- ^ Maybe (closing char, closedQ)
-
-data Expr
-	= Atom Symbol QuoteInfo
-	| Group [Expr]
-	deriving (Eq, Show, Read)
-
-data ParseError
-	= MissingOpenBracket    [Token]          -- ^ [Token] are tokens up to (not including) a bad TokenCloseBracket
-	| MissingCloseBracket
-	| MissingEndQuote       [Token] Token    -- ^ [Token] are tokens up to (not including) a bad TokenWord (Token)
-	| ParsedEmptyBrackets   [Token]          -- ^ [Token] are tokens up to (not including) a bad ()
-	deriving (Eq, Show, Read)
-
-data ParseMatchError
-	= ParseMatchErrorEmptyExprs
-	| ParseMatchErrorTryGotNoBody
-	| ParseMatchErrorEagerGotNoBody
-	| ParseMatchErrorNoReplacePart
-	| SplitFailed
-	| ExpectedClosingBracket String
-	| MatchEmptyTreeError
-	| TokenizeError ParseError
-	deriving (Eq, Show, Read)
-
-data DelimiterOpts
-	= DelimiterIgnoreQuotes
-	| DelimiterRespectQuotes
-	deriving (Eq, Show, Read)
-
-data Token
-	= TokenWord String QuoteInfo
-	| TokenOpenBracket
-	| TokenCloseBracket
-	deriving (Eq, Show, Read)
-
-class (Eq a, Ord a) => PatternElement a where
-	patternElemShow :: a -> String
-	patternElemRead :: String -> QuoteInfo -> a
 
 instance Read MyIreal where
 	readsPrec x str =
 		case readHFloat str of
 			Just (r, b) -> [(fromRational r, "")]
 			Nothing -> []
-
-type History a ctx = [(Tree a, Either (SimplifyPattern a) String, ctx)]
-type Stdout a ctx = (String, History a ctx, History a ctx)
-type Rulesets a = [[SimplifyPattern a]]
 
 type MyIreal = IReal
 
