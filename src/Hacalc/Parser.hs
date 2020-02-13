@@ -10,6 +10,8 @@ import Data.Char
 import PatternT.All
 import Hacalc.Types
 import Hacalc.UtilExternal
+import Hacalc.Parsing
+import Hacalc.Util
 
 import Debug.Trace
 

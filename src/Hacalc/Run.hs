@@ -11,6 +11,8 @@ import Hacalc.Types
 import Hacalc.Builtins
 import Hacalc.Util
 import Hacalc.UtilExternal
+import Hacalc.Parsing
+import Hacalc.Display
 
 -----------------------
 -- GENERAL INTERFACE --
@@ -31,7 +33,7 @@ data InterpretOptions = InterpretOptions
 	, interpretCondRecursionLimit        :: Maybe Int
 	} deriving (Eq, Show, Read, Typeable, Data)
 
-hacalcParse :: (PatternElement a) => InterpretOptions -> String -> Either ParseError (Tree a)
+hacalcParse :: (PatternElement a, Show a) => InterpretOptions -> String -> Either ParseError (Tree a)
 hacalcParse options line = either
 	Left
 	(Right . makeTree . Group . splitmaybe)
@@ -59,12 +61,12 @@ hacalcParse options line = either
 		then uncommented
 		else delimitSymbols delimiterMode (textDelimiters options) uncommented
 
-hacalcRunTree :: (PatternElement a, Monad m) => InterpretOptions -> [[SimplificationF a m ctx]] -> ctx -> (Tree a) -> m (Stdout a ctx)
+hacalcRunTree :: (PatternElement a, Show a, Monad m) => InterpretOptions -> [[SimplificationF a m ctx]] -> ctx -> (Tree a) -> m (Stdout a ctx)
 hacalcRunTree options rules ctx tree = do
 	result <- loop tree rules
 	return (getStdout result)
 	where
-	-- getStdout :: (PatternElement a) => [(Tree a, Either (SimplifyPattern a) String, ctx)] -> Stdout a ctx
+	-- getStdout :: (PatternElement a, Show a) => [(Tree a, Either (SimplifyPattern a) String, ctx)] -> Stdout a ctx
 	getStdout result = (lastS, hist, droped)
 		where
 		(hist, droped) = applyLimits result
@@ -72,7 +74,7 @@ hacalcRunTree options rules ctx tree = do
 		concated = if displayConcatByNumbersQ options then concatByNumbers lastTree else lastTree
 		lastS = stringifyTree0 concated
 
-	applyLimits :: (PatternElement a) => [(Tree a, Either (SimplifyPattern a) String, ctx)] -> ([(Tree a, Either (SimplifyPattern a) String, ctx)], [(Tree a, Either (SimplifyPattern a) String, ctx)])
+	applyLimits :: (PatternElement a, Show a) => [(Tree a, Either (SimplifyPattern a) String, ctx)] -> ([(Tree a, Either (SimplifyPattern a) String, ctx)], [(Tree a, Either (SimplifyPattern a) String, ctx)])
 	applyLimits hist = (sizes, dropedSizes)
 		where
 		(steps, dropedSteps) = maybe
@@ -84,7 +86,7 @@ hacalcRunTree options rules ctx tree = do
 			(\ lim -> historyLimitTreeSize lim hist)
 			(interpretTreeSizeLimit options)
 
-	-- loop :: (PatternElement a) => Tree a -> [[SimplificationF a m ctx]] -> m [(Tree a, Either (SimplifyPattern a) String, ctx)]
+	-- loop :: (PatternElement a, Show a) => Tree a -> [[SimplificationF a m ctx]] -> m [(Tree a, Either (SimplifyPattern a) String, ctx)]
 	loop tree [] = return []
 	loop tree (ruleset : rest) = do
 		history <- mixedApplySimplificationsUntil0Debug (interpretCondRecursionLimit options) ruleset ctx tree
@@ -94,7 +96,7 @@ hacalcRunTree options rules ctx tree = do
 		next <- loop newtree rest
 		return (history ++ next)
 
-hacalcRun :: (PatternElement a, Monad m) => InterpretOptions -> [[SimplificationF a m ctx]] -> ctx -> String -> Either ParseError (m (Stdout a ctx))
+hacalcRun :: (PatternElement a, Show a, Monad m) => InterpretOptions -> [[SimplificationF a m ctx]] -> ctx -> String -> Either ParseError (m (Stdout a ctx))
 hacalcRun options rules ctx line = either
 	Left
 	(Right . hacalcRunTree options rules ctx)

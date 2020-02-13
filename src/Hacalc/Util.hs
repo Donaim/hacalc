@@ -6,6 +6,38 @@ import Data.Maybe (isJust)
 import PatternT.All
 import Hacalc.Types
 import Hacalc.UtilExternal
+import Hacalc.Display
+
+-- | Simpliest working instance of PatternElement
+newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
+	deriving (Eq, Show, Read, Ord)
+
+treeToExpr :: (PatternElement a) => Tree a -> Expr
+treeToExpr t = case t of
+	Leaf s -> Atom (patternElemShow s) Nothing
+	Branch xs -> Group (map treeToExpr xs)
+
+appendQuotes :: QuoteInfo -> String -> String
+appendQuotes q s = case q of
+	Nothing -> s
+	Just (qq, closedQ) ->
+		qq : (escapeChar qq s)  ++ (if closedQ then [qq] else [])
+
+escapeChar :: Char -> String -> String
+escapeChar q s = case s of
+	[] -> []
+	(x : xs) ->
+		if q == x
+		then '\\' : x : escapeChar q xs
+		else x : escapeChar q xs
+
+instance PatternElement StringyLeaf where
+	patternElemRead s q = MkStringyLeaf (appendQuotes q s)
+	patternElemShow = unStringyLeaf
+
+-- | Read unquoted, used frequently when creating new Leafs
+patternElemReadUq :: (PatternElement a) => String -> a
+patternElemReadUq s = patternElemRead s Nothing
 
 historyLimitTreeSize :: (PatternElement a) => Int -> [(Tree a, b, c)] -> ([(Tree a, b, c)], [(Tree a, b, c)])
 historyLimitTreeSize limit hist = span (isJust . treeSizeLim limit . fst3) hist

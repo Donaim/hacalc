@@ -10,6 +10,7 @@ import PatternT.All
 import Hacalc.Types
 import Hacalc.Util
 import Hacalc.UtilExternal
+import Hacalc.Parsing
 
 ruleAdd :: String -> HPureSimplificationF
 ruleAdd = ruleAddLim Nothing
@@ -604,7 +605,7 @@ trueLeaf = Leaf $ patternElemReadUq "True"
 falseLeaf :: (PatternElement a) => Tree a
 falseLeaf = Leaf $ patternElemReadUq "False"
 
-funcRuleEqual :: (PatternElement a) => Maybe Integer -> [Tree a -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)
+funcRuleEqual :: (PatternElement a, Show a) => Maybe Integer -> [Tree a -> Maybe (Tree a)] -> [Tree a] -> Maybe (Tree a)
 funcRuleEqual mlim simplifies args = case args of
 	(x : xs) ->
 		let simplifiedxs = map (sloop (applyFirstSimplificationF simplifies)) xs
@@ -615,7 +616,7 @@ funcRuleEqual mlim simplifies args = case args of
 	(_) -> Nothing
 
 	where
-	sloop :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Tree a
+	sloop :: (PatternElement a, Show a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Tree a
 	sloop = maybe applySimplificationsUntil0LastF (applySimplificationsUntil0LastFLim) mlim
 
 stdBinaryRule :: (PatternElement a) => (a -> a -> Maybe (Tree a)) -> String -> PureSimplificationF a
